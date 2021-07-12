@@ -61,7 +61,7 @@ chatMessageSchema.statics.createPostInChatRoom = async function (
 
     const messageId = post._id;
 
-    const messageInfo = this.aggregate([
+    const messageInfo = await this.aggregate([
       { $match: { _id: messageId } },
       {
         $lookup: {
@@ -113,6 +113,7 @@ chatMessageSchema.statics.createPostInChatRoom = async function (
         },
       },
     ]);
+    console.log("messageInfo :>> ", messageInfo);
     return messageInfo;
   } catch (error) {
     console.log("error :>> ", error);

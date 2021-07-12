@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-14 16:26:35
- * @LastEditTime: 2021-07-05 16:19:18
+ * @LastEditTime: 2021-07-08 15:34:36
  * @LastEditors: Kenzi
  */
 
@@ -21,11 +21,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    avatar: String,
+    avatar: { type: String, default: "" },
     name: { type: String, required: true },
     status: { type: String, default: "" },
     friends: { type: Array, default: [] },
-    public_id: { type: String, unique: true }, //用于被陌生用户搜索加好友
+    public_id: { type: String, unique: true, default: null }, //用于被陌生用户搜索加好友
   },
   {
     timestamps: true,
@@ -38,20 +38,17 @@ userSchema.plugin(uniqueValidator);
  * @param {String} id - id of user
  * @return {Object}  array of all chatroom that the user belongs to
  */
-userSchema.statics.createNewUser = async function (
-  username,
-  password,
-  avatar,
-  name
-) {
+userSchema.statics.createNewUser = async function (username, password, name) {
   try {
-    const user = await this.create({ username, password, avatar, name });
+    const user = await this.create({ username, password, name });
     return user;
   } catch (error) {
     console.log("error :>> ", error);
     throw error;
   }
 };
+
+//获取用户讯息
 
 /**
  * @param {String} id, user id
@@ -71,6 +68,17 @@ userSchema.statics.findUserById = async function (id) {
         },
       },
     ]);
+    return user;
+  } catch (error) {
+    console.log("error :>> ", error);
+    throw error;
+  }
+};
+
+//登入用
+userSchema.statics.findUserByUsername = async function (username) {
+  try {
+    const user = await this.findOne({ username: username });
     return user;
   } catch (error) {
     console.log("error :>> ", error);

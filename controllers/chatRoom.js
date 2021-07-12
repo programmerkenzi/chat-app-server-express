@@ -33,9 +33,10 @@ export default {
         chatRoom.chat_room_id
       );
 
-      return res
-        .status(200)
-        .json({ success: true, data: { ...chatRoom, room_info: room_info } });
+      return res.status(200).json({
+        success: true,
+        data: { ...chatRoom, room_info: room_info },
+      });
     } catch (error) {
       return res.status(500).json({ success: false, error: error });
     }
@@ -58,6 +59,7 @@ export default {
         filename,
         currentLoggedUser
       );
+      console.log("post :>> ", post);
 
       if (post) {
         //emit all users except in room currentLoggedUser
@@ -89,6 +91,7 @@ export default {
       return res.status(200).json({ success: true, data: rooms[0] });
     } catch (error) {
       console.log("error :>> ", error);
+
       return res.status(500).json({ success: false, error: error });
     }
   },
@@ -110,8 +113,8 @@ export default {
         data: conversations[0],
       });
     } catch (error) {
-      console.log('error :>> ', error);
-      return res.status(500).json({ success: false, error:error });
+      console.log("error :>> ", error);
+      return res.status(500).json({ success: false, error: error });
     }
   },
   markConversationReadByRoomId: async (req, res) => {

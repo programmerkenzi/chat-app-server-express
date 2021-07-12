@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-06-23 14:14:59
+ * @LastEditTime: 2021-07-12 11:48:05
  * @LastEditors: Kenzi
  */
 // utils
@@ -11,6 +11,8 @@ import makeValidation from "@withvoid/make-validation";
 import OnlineUsers, { USER_TYPES } from "../models/OnlineUsers.js";
 import Users from "../models/Users.js";
 import ChatRoom from "../models/ChatRoom.js";
+import bcrypt from "bcrypt";
+import { online_users } from "./../utils/WebSockets.js";
 
 export default {
   onGetAllUsers: async (req, res) => {
@@ -23,29 +25,23 @@ export default {
   },
   onGetUserById: async (req, res, next) => {
     try {
-      const user = await Users.findUserById(req.params.user_id);
+      const user = await Users.findUserById(req.user_id);
+      return res.status(200).json({ success: true, data: user });
+    } catch (error) {
+      console.log("error :>> ", error);
+      return res.status(500).json({ success: false, error: error });
+    }
+  },
+
+  onGetUserByUsername: async (username) => {
+    try {
+      const user = await Users.findUserByUsername(username);
       return user;
     } catch (error) {
       throw error;
     }
   },
-  onCreateUser: async (req, res) => {
-    try {
-      const validation = makeValidation((types) => ({
-        payload: req.body,
-        checks: {
-          username: { type: types.string },
-          name: { type: types.string },
-        },
-      }));
-      if (!validation.success) return res.status(400).json({ ...validation });
-      const { username, avatar, name } = req.body;
-      const user = await Users.createNewUser(username, avatar, name);
-      return res.status(200).json({ success: true, user });
-    } catch (error) {
-      return res.status(500).json({ success: false, error: error.message });
-    }
-  },
+
   onDeleteUserById: async (req, res) => {
     try {
       const res = await OnlineUsers.deleteByUserById(req.params.id);
@@ -131,12 +127,36 @@ export default {
         },
       }));
       const { username, password, name } = req.body;
-      const avatar =
-        "https://notjustdev-dummy.s3.us-east-2.amazonaws.com/avatars/3.jpg";
+
+      //Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashPassword = await bcrypt.hash(password, salt);
 
       if (!validation.success) return res.status(400).json({ ...validation });
 
-      const user = await Users.createNewUser(username, password, avatar, name);
-    } catch (error) {}
+      const user = await Users.createNewUser(username, hashPassword, name);
+      return res.status(200).json({
+        success: true,
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, error: error });
+    }
+  },
+  onLogout: async (req, res) => {
+    try {
+      const currentLoggedUserSocketId = req.socket_id;
+      const theUser = online_users.findIndex(
+        (user) => user.socket_id === currentLoggedUserSocketId
+      );
+      if (theUser !== -1) {
+        online_users.splice(theUser, 1);
+      }
+      return res.status(200).json({
+        success: true,
+      });
+    } catch (error) {
+      console.log("error :>> ", error);
+      return res.status(500).json({ success: false, error: error });
+    }
   },
 };

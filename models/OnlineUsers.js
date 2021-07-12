@@ -69,7 +69,7 @@ onlineUserSchema.statics.getUserById = async function (id) {
  */
 onlineUserSchema.statics.getUsers = async function (username) {
   try {
-    const users = await this.find({ username: username });
+    const users = await this.findOne({ username: username });
     return users;
   } catch (error) {
     throw error;

@@ -36,7 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/", indexRouter);
-app.use("/users", decode, userRouter);
+app.use("/users", userRouter);
 app.use("/room", decode, chatRoomRouter);
 app.use("/notification", decode, notificationRouter);
 app.use("/fs", fsRouter);
