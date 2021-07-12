@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-13 14:59:47
+ * @LastEditTime: 2021-07-13 15:09:36
  * @LastEditors: Kenzi
  */
 
@@ -71,8 +71,10 @@ export const decode = (req, res, next) => {
       .json({ success: false, message: "No access token provided" });
   }
   try {
-    const accessToken = req.headers.authorization.token.split(" ")[1];
-    const client_socket_id = req.headers.authorization.socket_id;
+    const { authorization } = req.headers;
+    console.log("authorization :>> ", authorization);
+    const accessToken = authorization.token.split(" ")[1];
+    const client_socket_id = authorization.socket_id;
     console.log("client_socket_id :>> ", client_socket_id);
     console.log("req.headers :>> ", req.headers);
     const decoded = jwt.verify(accessToken, SECRET_KEY);
@@ -112,8 +114,10 @@ export const refreshToken = (req, res, next) => {
         .status(400)
         .json({ success: false, message: "No access token provided" });
     }
-    const accessToken = req.headers.authorization.token.split(" ")[1];
-    const client_socket_id = req.headers.authorization.socket_id;
+    const { authorization } = req.headers;
+    console.log("authorization :>> ", authorization);
+    const accessToken = authorization.token.split(" ")[1];
+    const client_socket_id = authorization.socket_id;
     const decoded = jwt.verify(accessToken, SECRET_KEY);
     const user_id = decoded.user_id;
     req.user_id = user_id;
