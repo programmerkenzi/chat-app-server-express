@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-14 16:26:35
- * @LastEditTime: 2021-07-08 15:34:36
+ * @LastEditTime: 2021-07-13 09:52:11
  * @LastEditors: Kenzi
  */
 
@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     status: { type: String, default: "" },
     friends: { type: Array, default: [] },
-    public_id: { type: String, unique: true, default: null }, //用于被陌生用户搜索加好友
+    public_id: { type: String, unique: true }, //用于被陌生用户搜索加好友
   },
   {
     timestamps: true,
@@ -40,7 +40,12 @@ userSchema.plugin(uniqueValidator);
  */
 userSchema.statics.createNewUser = async function (username, password, name) {
   try {
-    const user = await this.create({ username, password, name });
+    const user = await this.create({
+      username: username,
+      password: password,
+      name: name,
+      public_id: username,
+    });
     return user;
   } catch (error) {
     console.log("error :>> ", error);
