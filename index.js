@@ -34,10 +34,7 @@ app.set("port", port);
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(function (req, res, next) {
-  res.setHeader("Access-Control-Allow-Headers", "socket_id");
-  next();
-});
+
 app.use("/", indexRouter);
 app.use("/users", userRouter);
 app.use("/room", decode, chatRoomRouter);
