@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:22
- * @LastEditTime: 2021-07-05 16:47:40
+ * @LastEditTime: 2021-07-13 14:53:24
  * @LastEditors: Kenzi
  */
 import http from "http";
@@ -34,7 +34,10 @@ app.set("port", port);
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
+app.use(function (req, res, next) {
+  res.setHeader("Access-Control-Allow-Headers", "socket_id");
+  next();
+});
 app.use("/", indexRouter);
 app.use("/users", userRouter);
 app.use("/room", decode, chatRoomRouter);
