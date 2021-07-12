@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-09 12:34:56
+ * @LastEditTime: 2021-07-13 14:35:28
  * @LastEditors: Kenzi
  */
 
@@ -70,9 +70,10 @@ export const decode = (req, res, next) => {
       .status(400)
       .json({ success: false, message: "No access token provided" });
   }
-  const accessToken = req.headers.authorization.split(" ")[1];
-  const client_socket_id = req.headers.socket_id;
   try {
+    const accessToken = req.headers.authorization.split(" ")[1];
+    const client_socket_id = req.headers.socket_id;
+    console.log("client_socket_id :>> ", client_socket_id);
     const decoded = jwt.verify(accessToken, SECRET_KEY);
     const user_id = decoded.user_id;
     console.log(" decoded user_id :>> ", user_id);
