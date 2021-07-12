@@ -51,6 +51,7 @@ export default {
       );
       const currentLoggedUser = req.user_id;
       const currentLoggedUserSocketId = req.socket_id;
+      console.log("currentLoggedUserSocketId :>> ", currentLoggedUserSocketId);
 
       const post = await ChatMessageModel.createPostInChatRoom(
         room_id,
@@ -59,7 +60,6 @@ export default {
         filename,
         currentLoggedUser
       );
-      console.log("post :>> ", post);
 
       if (post) {
         //emit all users except in room currentLoggedUser
