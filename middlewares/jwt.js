@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-13 15:09:36
+ * @LastEditTime: 2021-07-13 15:13:39
  * @LastEditors: Kenzi
  */
 
@@ -72,11 +72,13 @@ export const decode = (req, res, next) => {
   }
   try {
     const { authorization } = req.headers;
-    console.log("authorization :>> ", authorization);
+    console.log("req.headers :>> ", req.headers);
+    console.log("authorization.token :>> ", authorization.token);
+    console.log("authorization.socket_id :>> ", authorization.socket_id);
+    console.log("authorization[0] :>> ", authorization[0]);
     const accessToken = authorization.token.split(" ")[1];
     const client_socket_id = authorization.socket_id;
     console.log("client_socket_id :>> ", client_socket_id);
-    console.log("req.headers :>> ", req.headers);
     const decoded = jwt.verify(accessToken, SECRET_KEY);
     const user_id = decoded.user_id;
     console.log(" decoded user_id :>> ", user_id);
