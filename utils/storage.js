@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-25 14:59:00
- * @LastEditTime: 2021-06-28 11:33:17
+ * @LastEditTime: 2021-07-14 14:51:41
  * @LastEditors: Kenzi
  */
 
@@ -35,6 +35,8 @@ const storage = new GridFsStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage: storage,
+});
 
 export default upload;

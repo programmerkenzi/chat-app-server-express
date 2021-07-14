@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:22
- * @LastEditTime: 2021-07-13 14:53:24
+ * @LastEditTime: 2021-07-14 17:33:02
  * @LastEditors: Kenzi
  */
 import http from "http";
@@ -33,7 +33,7 @@ app.set("port", port);
 
 app.use(logger("dev"));
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "100mb" }));
 
 app.use("/", indexRouter);
 app.use("/users", userRouter);

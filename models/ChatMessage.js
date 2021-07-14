@@ -16,6 +16,21 @@ const read_by_recipientSchema = new mongoose.Schema(
   }
 );
 
+const delete_by_userSchema = new mongoose.Schema(
+  {
+    _id: false,
+    delete_by_user_id: String,
+    delete_at: {
+      type: Date,
+      default: Date.now(),
+    },
+  },
+  {
+    timestamps: false,
+    collection: "chat_messages",
+  }
+);
+
 const chatMessageSchema = new mongoose.Schema(
   {
     _id: {
@@ -27,6 +42,7 @@ const chatMessageSchema = new mongoose.Schema(
     file: { type: Array, default: [] },
     post_by_user: { type: String, required: true },
     read_by_recipients: [read_by_recipientSchema],
+    delete_by_users: [delete_by_userSchema],
   },
   {
     timestamps: true,
@@ -426,6 +442,29 @@ chatMessageSchema.statics.findMessage = async function (message_id) {
     ]);
 
     return message;
+  } catch (error) {
+    throw error;
+  }
+};
+
+chatMessageSchema.statics.deleteMessages = async function (
+  message_ids,
+  current_user_id
+) {
+  try {
+    const update = await this.updateMany(
+      { _id: { $in: message_ids } },
+      {
+        $addToSet: {
+          delete_by_users: { delete_by_user_id: current_user_id },
+        },
+      },
+      {
+        multi: true,
+      }
+    );
+
+    return update;
   } catch (error) {
     throw error;
   }
