@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-07 12:35:35
+ * @LastEditTime: 2021-07-15 15:40:28
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
@@ -41,6 +41,7 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
   try {
     const rooms_info = await this.aggregate([
       { $match: { user_ids: { $all: [user_id] } } },
+
       {
         $lookup: {
           from: "users",
@@ -61,12 +62,37 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
           as: "user_info",
         },
       },
+
       {
         $lookup: {
           from: "chat_messages",
-          let: { room_id: "$_id" },
+          let: {
+            room_id: "$_id",
+          },
           pipeline: [
-            { $match: { $expr: { $eq: ["$chat_room_id", "$$room_id"] } } },
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$chat_room_id", "$$room_id"] },
+                    //已删除讯息过滤
+                    {
+                      $not: {
+                        $in: [user_id, "$delete_by_users.delete_by_user_id"],
+                      },
+                    },
+                    {
+                      $not: {
+                        $in: [
+                          "$post_by_user",
+                          "$delete_by_users.delete_by_user_id",
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
             { $sort: { createdAt: -1 } },
             { $limit: 1 },
           ],
@@ -74,7 +100,6 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
           as: "last_message",
         },
       },
-
       {
         $lookup: {
           from: "chat_messages",
@@ -93,6 +118,19 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
                         ],
                       },
                     },
+                    {
+                      $not: {
+                        $in: [user_id, "$delete_by_users.delete_by_user_id"],
+                      },
+                    },
+                    {
+                      $not: {
+                        $in: [
+                          "$post_by_user",
+                          "$delete_by_users.delete_by_user_id",
+                        ],
+                      },
+                    },
                   ],
                 },
               },
@@ -101,7 +139,6 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
           as: "unread",
         },
       },
-
       {
         $facet: {
           total: [

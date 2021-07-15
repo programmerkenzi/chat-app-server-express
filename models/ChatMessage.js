@@ -142,11 +142,31 @@ chatMessageSchema.statics.createPostInChatRoom = async function (
  */
 chatMessageSchema.statics.getConversationByRoomId = async function (
   chat_room_id,
+  current_user_id,
   options = {}
 ) {
   try {
     const conversation = this.aggregate([
-      { $match: { chat_room_id: chat_room_id } },
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { chat_room_id: chat_room_id },
+              //过滤已删除讯息
+              {
+                $not: {
+                  $in: [current_user_id, "$delete_by_users.delete_by_user_id"],
+                },
+              },
+              {
+                $not: {
+                  $in: ["$post_by_user", "$delete_by_users.delete_by_user_id"],
+                },
+              },
+            ],
+          },
+        },
+      },
       { $sort: { createdAt: -1 } },
       {
         $lookup: {
@@ -200,6 +220,7 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
                 file: "$file",
                 filename: "$filename",
                 read_by_recipients: "$read_by_recipients",
+                delete_by_users: "$delete_by_users",
                 createdAt: "$createdAt",
                 user: "$user",
               },
@@ -453,7 +474,10 @@ chatMessageSchema.statics.deleteMessages = async function (
 ) {
   try {
     const update = await this.updateMany(
-      { _id: { $in: message_ids } },
+      {
+        _id: { $in: message_ids },
+        "delete_by_users.delete_by_user_id": { $ne: current_user_id },
+      },
       {
         $addToSet: {
           delete_by_users: { delete_by_user_id: current_user_id },

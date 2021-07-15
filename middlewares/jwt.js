@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-13 15:20:11
+ * @LastEditTime: 2021-07-15 17:05:59
  * @LastEditors: Kenzi
  */
 
@@ -12,7 +12,7 @@ import makeValidation from "@withvoid/make-validation";
 import bcrypt from "bcrypt";
 import { online_users } from "../utils/WebSockets.js";
 const SECRET_KEY = "some-secret-key";
-const expiresIn = "2h";
+const expiresIn = 1000 * 60 * 60 * 2;
 export const encode = async (req, res, next) => {
   try {
     const validation = makeValidation((types) => ({
@@ -119,6 +119,7 @@ export const refreshToken = (req, res, next) => {
     console.log("client_socket_id :>> ", client_socket_id);
     try {
       const decoded = jwt.verify(accessToken, SECRET_KEY);
+      console.log("decoded :>> ", decoded);
       const user_id = decoded.user_id;
       req.user_id = user_id;
       req.socket_id = client_socket_id;
@@ -132,7 +133,8 @@ export const refreshToken = (req, res, next) => {
       req.refreshToken = newAuthToken;
       return next();
     } catch (error) {
-      return res.status(401).json({ success: false, error: "unauthorized" });
+      console.log("error :>> ", error);
+      return res.status(401).json({ success: false, message: "unauthorized" });
     }
   } catch (error) {}
 };

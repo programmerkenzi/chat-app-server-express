@@ -2,14 +2,14 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-13 13:41:57
+ * @LastEditTime: 2021-07-15 12:10:31
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
 import config from "./index.js";
 
-// export const MONGO_URL = `mongodb://${config.db.url}/${config.db.name}/`;
-export const MONGO_URL = `mongodb://${config.db.username}:${config.db.password}@${config.db.url}/${config.db.name}`;
+export const MONGO_URL = `mongodb://${config.db.url}/${config.db.name}`;
+//export const MONGO_URL = `mongodb://${config.db.username}:${config.db.password}@${config.db.url}/${config.db.name}`;
 
 mongoose.connect(MONGO_URL, {
   useNewUrlParser: true,

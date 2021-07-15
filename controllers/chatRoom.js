@@ -98,6 +98,7 @@ export default {
   getConversationByRoomId: async (req, res) => {
     try {
       const { room_id } = req.params;
+      const currentLoggedUser = req.user_id;
       //分页
       const options = {
         page: parseInt(req.query.page) || 0,
@@ -105,6 +106,7 @@ export default {
       };
       const conversations = await ChatMessageModel.getConversationByRoomId(
         room_id,
+        currentLoggedUser,
         options
       );
 

@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:27
- * @LastEditTime: 2021-07-12 11:27:58
+ * @LastEditTime: 2021-07-15 17:01:27
  * @LastEditors: Kenzi
  */
 import express from "express";
@@ -24,7 +24,7 @@ router
   .post("/refresh-token", refreshToken, (req, res, next) => {
     return res.status(200).json({
       success: true,
-      refreshToken: req.refreshToken,
+      refreshToken: "Bearer " + req.refreshToken,
       expires_in: req.expiresIn,
     });
   })
