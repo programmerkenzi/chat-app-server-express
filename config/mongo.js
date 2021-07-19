@@ -2,14 +2,14 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-15 12:10:31
+ * @LastEditTime: 2021-07-19 18:29:58
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
-import config from "./index.js";
+import dotenv from "dotenv";
+const config = dotenv.config();
 
-export const MONGO_URL = `mongodb://${config.db.url}/${config.db.name}`;
-//export const MONGO_URL = `mongodb://${config.db.username}:${config.db.password}@${config.db.url}/${config.db.name}`;
+export const MONGO_URL = process.env.MANGO_DB_URL_PRODUCTION;
 
 mongoose.connect(MONGO_URL, {
   useNewUrlParser: true,

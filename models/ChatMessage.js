@@ -129,7 +129,6 @@ chatMessageSchema.statics.createPostInChatRoom = async function (
         },
       },
     ]);
-    console.log("messageInfo :>> ", messageInfo);
     return messageInfo;
   } catch (error) {
     console.log("error :>> ", error);
@@ -151,7 +150,7 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
         $match: {
           $expr: {
             $and: [
-              { chat_room_id: chat_room_id },
+              { $eq: [chat_room_id, "$chat_room_id"] },
               //过滤已删除讯息
               {
                 $not: {
@@ -430,7 +429,6 @@ chatMessageSchema.statics.getRecentConversation = async function (
         },
       },
     ]);
-    console.log("rooms :>> ", rooms);
     return rooms;
   } catch (error) {
     console.log("error :>> ", error);

@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-15 15:40:28
+ * @LastEditTime: 2021-07-16 17:58:14
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
@@ -210,7 +210,6 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
  */
 chatRoomSchema.statics.getChatRoomByRoomId = async function (room_id) {
   try {
-    // const room = await this.findOne({ _id: room_id });
     const room_info = await this.aggregate([
       { $match: { _id: room_id } },
       {
@@ -284,17 +283,17 @@ chatRoomSchema.statics.initiateChat = async function (user_ids, type, creator) {
     if (availableRoom) {
       return {
         is_new: false,
-        chat_room_id: availableRoom._doc._id,
-        type: availableRoom._doc.type,
+        room_info: availableRoom,
       };
     }
 
     const newRoom = await this.create({ user_ids, type, creator });
-    return {
-      is_new: true,
-      chat_room_id: newRoom._doc._id,
-      type: newRoom._doc.type,
-    };
+    if (newRoom) {
+      return {
+        is_new: true,
+        room_info: newRoom,
+      };
+    }
   } catch (error) {
     console.log("error on start chat method", error);
     throw error;

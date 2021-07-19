@@ -30,12 +30,12 @@ export default {
         currentLoggedUser
       );
       const room_info = await ChatRoomModel.getChatRoomByRoomId(
-        chatRoom.chat_room_id
+        chatRoom.room_info._id
       );
 
       return res.status(200).json({
         success: true,
-        data: { ...chatRoom, room_info: room_info },
+        data: { room_info: room_info },
       });
     } catch (error) {
       return res.status(500).json({ success: false, error: error });

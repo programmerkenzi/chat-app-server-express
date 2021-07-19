@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:22
- * @LastEditTime: 2021-07-14 17:33:02
+ * @LastEditTime: 2021-07-19 16:32:30
  * @LastEditors: Kenzi
  */
 import http from "http";
@@ -10,6 +10,9 @@ import express from "express";
 import logger from "morgan";
 import cors from "cors";
 import { Server } from "socket.io";
+import createError from "http-errors";
+//redis connection
+import "./config/redis.js";
 // mongo connection
 import "./config/mongo.js";
 // socket configuration
@@ -22,8 +25,7 @@ import deleteRouter from "./routes/delete.js";
 import fsRouter from "./routes/fs.js";
 import notificationRouter from "./routes/notification.js";
 // middlewares
-import { decode } from "./middlewares/jwt.js";
-import upload from "./utils/storage.js";
+import decode from "./middlewares/jwt.js";
 
 const app = express();
 
@@ -36,18 +38,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false, limit: "100mb" }));
 
 app.use("/", indexRouter);
-app.use("/users", userRouter);
-app.use("/room", decode, chatRoomRouter);
-app.use("/notification", decode, notificationRouter);
+app.use("/users", decode.verifyAccessToken, userRouter);
+app.use("/room", decode.verifyAccessToken, chatRoomRouter);
+app.use("/notification", decode.verifyAccessToken, notificationRouter);
 app.use("/fs", fsRouter);
 
-app.use("/delete", decode, deleteRouter);
+app.use("/delete", decode.verifyAccessToken, deleteRouter);
 
-/** catch 404 and forward to error handler */
-app.use("*", (req, res) => {
-  return res.status(404).json({
-    success: false,
-    message: "API endpoint doesnt exist",
+/**  error handler */
+app.use((err, req, res, next) => {
+  res.status(err.status || 500);
+  res.send({
+    error: {
+      status: err.status || 500,
+      message: err.message,
+    },
   });
 });
 
