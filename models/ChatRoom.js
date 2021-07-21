@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-16 17:58:14
+ * @LastEditTime: 2021-07-22 10:23:15
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
@@ -20,7 +20,7 @@ const chatRoomSchema = new mongoose.Schema(
     name: { type: String, default: "" },
     creator: String,
     avatar: { type: String, default: "" },
-    type: String,
+    type: { type: String, default: "private", enum: ["group", "private"] },
     description: { type: String, default: "" },
     user_ids: Array,
   },

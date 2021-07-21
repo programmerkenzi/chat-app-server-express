@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-25 15:05:27
- * @LastEditTime: 2021-07-19 12:08:33
+ * @LastEditTime: 2021-07-20 12:22:15
  * @LastEditors: Kenzi
  */
 
@@ -40,7 +40,6 @@ router
           file: reqFiles,
         });
       } catch (error) {
-        console.log("error :>> ", error);
         return res.status(500).json({
           success: false,
         });
@@ -48,6 +47,10 @@ router
     }
   )
   .get("/:filename", decode.verifyAccessToken, fs.getFile)
-  .get("/download/:filename/:token", decode.verifyAccessToken, fs.downloadFile);
+  .get(
+    "/download/:filename/:token",
+    decode.verifyAccessTokenFromUrl,
+    fs.downloadFile
+  );
 
 export default router;

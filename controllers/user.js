@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-12 11:48:05
+ * @LastEditTime: 2021-07-21 15:40:40
  * @LastEditors: Kenzi
  */
 // utils
@@ -13,6 +13,9 @@ import Users from "../models/Users.js";
 import ChatRoom from "../models/ChatRoom.js";
 import bcrypt from "bcrypt";
 import { online_users } from "./../utils/WebSockets.js";
+import Notifications, { NOTIFICATION_TYPES } from "../models/Notification.js";
+import createError from "http-errors";
+import { emitUsersExceptSender } from "../utils/utils.js";
 
 export default {
   onGetAllUsers: async (req, res) => {
@@ -70,18 +73,49 @@ export default {
   onAddFriend: async (req, res) => {
     try {
       const currentLoggedUser = req.user_id;
+      const currentLoggedUserSocketId = req.socket_id;
+      const notificationsId = req.body.notification_id;
       const addUserPublicId = req.params.public_id;
       const addUser = await Users.findUsersByPublicId(addUserPublicId);
-
+      if (!addUser.length) return res(createError(400, "wrong public_id"));
       const addFriends = await Users.addNewFriend(
         currentLoggedUser,
         addUser[0]._id
       );
+
+      //删除交友推拨
+      if (!notificationsId)
+        return res(createError(400, "pls provide notification_id"));
+      const deletedNotifications = await Notifications.deleteNotificationById(
+        notificationsId
+      );
+      console.log("deletedNotifications :>> ", deletedNotifications);
+
+      //emit给目前用户的其他装置
+      emitUsersExceptSender(
+        currentLoggedUserSocketId,
+        [currentLoggedUser],
+        "add_friend",
+        addUser[0]
+      );
+
+      //emit给发送交友邀请的用户
+
+      const currentLoggedUserInfo = await Users.findUserById(currentLoggedUser);
+
+      emitUsersExceptSender(
+        currentLoggedUserSocketId,
+        [addUser[0]._id],
+        "add_friend",
+        currentLoggedUserInfo[0]
+      );
+
       return res.status(200).json({
         success: true,
-        data: addFriends,
+        data: { ...addFriends, ...deletedNotifications, user_info: addUser[0] },
       });
     } catch (error) {
+      console.log("error :>> ", error);
       return res.status(500).json({ success: false, error: error });
     }
   },

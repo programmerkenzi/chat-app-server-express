@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-14 16:26:35
- * @LastEditTime: 2021-07-13 09:52:11
+ * @LastEditTime: 2021-07-21 15:08:11
  * @LastEditors: Kenzi
  */
 
@@ -70,6 +70,7 @@ userSchema.statics.findUserById = async function (id) {
           name: "$name",
           status: "$status",
           avatar: "$avatar",
+          public_id: "$public_id",
         },
       },
     ]);
@@ -135,18 +136,15 @@ userSchema.statics.findUsersFriends = async function (user_id) {
  * @param {String} add_user_id  要加的朋友的user id
  * @returns
  */
-userSchema.statics.addNewFriend = async function (
-  current_user_id,
-  add_user_id
-) {
+userSchema.statics.addNewFriend = async function (user1_id, user2_id) {
   try {
-    const update = await this.updateMany(
+    const updateUser1 = await this.updateMany(
       {
-        _id: current_user_id,
+        _id: user1_id,
       },
       {
         $addToSet: {
-          friends: add_user_id,
+          friends: user2_id,
         },
       },
       {
@@ -154,7 +152,21 @@ userSchema.statics.addNewFriend = async function (
       }
     );
 
-    return update;
+    const updateUser2 = await this.updateMany(
+      {
+        _id: user2_id,
+      },
+      {
+        $addToSet: {
+          friends: user1_id,
+        },
+      },
+      {
+        multi: true,
+      }
+    );
+
+    return true;
   } catch (error) {
     console.log("error :>> ", error);
     throw error;
@@ -177,6 +189,7 @@ userSchema.statics.findUsersByPublicId = async function (user_public_id) {
           name: "$name",
           status: "$status",
           avatar: "$avatar",
+          public_id: "$public_id",
         },
       },
     ]);

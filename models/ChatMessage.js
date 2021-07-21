@@ -38,7 +38,7 @@ const chatMessageSchema = new mongoose.Schema(
       default: () => uuidv4().replace(/\-/g, ""),
     },
     chat_room_id: { type: String, required: true },
-    message: mongoose.Schema.Types.Mixed,
+    message: String,
     file: { type: Array, default: [] },
     post_by_user: { type: String, required: true },
     read_by_recipients: [read_by_recipientSchema],

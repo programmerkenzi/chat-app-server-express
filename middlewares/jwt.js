@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-19 18:28:00
+ * @LastEditTime: 2021-07-21 17:09:01
  * @LastEditors: Kenzi
  */
 
@@ -38,7 +38,6 @@ export default {
 
         const payload = {
           user_id: hasUser._id,
-          device_id: device_id,
         };
 
         //创建token
@@ -69,7 +68,8 @@ export default {
   verifyAccessToken: (req, res, next) => {
     try {
       if (!req.headers["authorization"])
-        return createError(400, "No access token provided");
+        return next(createError(400, "No access token provided"));
+      console.log("req.headers :>> ", req.headers);
       const authorization = req.headers.authorization.split(" ");
       const accessToken = authorization[1];
       const client_socket_id = authorization[3];
@@ -82,6 +82,7 @@ export default {
       req.socket_id = client_socket_id;
       return next();
     } catch (error) {
+      console.log("error :>> ", error);
       return next(createError.Unauthorized());
     }
   },
@@ -118,7 +119,7 @@ export default {
         process.env.REFRESH_TOKEN_SECRET
       );
 
-      const { user_id, device_id } = decode;
+      const { user_id } = decode;
       const validFreshToken = await client.get(user_id);
 
       if (validFreshToken !== oldRefreshToken.split(" ")[1])
@@ -126,7 +127,6 @@ export default {
 
       const payload = {
         user_id: user_id,
-        device_id: device_id,
       };
 
       //创建新的accessToken
@@ -154,7 +154,7 @@ export default {
     }
   },
 
-  decodeUrl: (req, res, next) => {
+  verifyAccessTokenFromUrl: (req, res, next) => {
     if (!req.params.token) {
       return res
         .status(400)
@@ -163,11 +163,12 @@ export default {
     const accessToken = req.params.token;
 
     try {
-      const decoded = jwt.verify(accessToken, SECRET_KEY);
+      const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
       const user_id = decoded.user_id;
       req.user_id = user_id;
       return next();
     } catch (error) {
+      console.log("error :>> ", error);
       return next(createError.Unauthorized());
     }
   },

@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:22
- * @LastEditTime: 2021-07-15 12:27:05
+ * @LastEditTime: 2021-07-21 10:51:04
  * @LastEditors: Kenzi
  */
 import ChatRoomModel from "../models/ChatRoom.js";
@@ -10,6 +10,8 @@ import ChatMessageModel from "../models/ChatMessage.js";
 import { gfs } from "../config/mongo.js";
 import makeValidation from "@withvoid/make-validation";
 import { emitUsersExceptSender } from "./../utils/utils.js";
+import NotificationModel from "../models/Notification.js";
+import createError from "http-errors";
 
 export default {
   deleteRoomById: async (req, res) => {
@@ -125,6 +127,21 @@ export default {
     } catch (error) {
       console.log("error :>> ", error);
       return res.status(500).json({ success: false, error: error });
+    }
+  },
+  deleteNotificationById: async (req, res, next) => {
+    try {
+      const notification_id = req.params.notification_id;
+      if (!notification_id)
+        return res(createError(400, "pls provide notification_id"));
+
+      const deleteNotification = await NotificationModel.deleteNotificationById(
+        notification_id
+      );
+
+      return res.status(200).json({ success: true, ...deleteNotification });
+    } catch (error) {
+      return res(createError.InternalServerError());
     }
   },
 };
