@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-06-15 13:46:53
+ * @LastEditTime: 2021-07-22 12:55:16
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
@@ -36,8 +36,7 @@ onlineUserSchema.statics.onUserOnline = async function (username, socket_id) {
       { socket_id: socket_id },
       { upsert: false }
     );
-    console.log("username :>> ", username);
-    console.log("user :>> ", user);
+
     if (!user) {
       const createUser = await this.create({
         username: username,
