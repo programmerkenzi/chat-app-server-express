@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:27
- * @LastEditTime: 2021-06-18 18:12:44
+ * @LastEditTime: 2021-07-22 17:29:05
  * @LastEditors: Kenzi
  */
 import express from "express";
@@ -16,6 +16,8 @@ router
   .get("/:room_id/messages", chatRoom.getConversationByRoomId)
   .post("/initiate", chatRoom.initiate)
   .post("/:room_id/message", chatRoom.postMessage)
-  .put("/:room_id/mark-read", chatRoom.markConversationReadByRoomId);
+  .put("/:room_id/mark-read", chatRoom.markConversationReadByRoomId)
+  .post("/:room_id/forward_messages", chatRoom.forwardMessages)
+  .post("/:room_id/reply_message", chatRoom.replyMessage);
 
 export default router;

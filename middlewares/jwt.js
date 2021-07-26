@@ -69,7 +69,6 @@ export default {
     try {
       if (!req.headers["authorization"])
         return next(createError(400, "No access token provided"));
-      console.log("req.headers :>> ", req.headers);
       const authorization = req.headers.authorization.split(" ");
       const accessToken = authorization[1];
       const client_socket_id = authorization[3];

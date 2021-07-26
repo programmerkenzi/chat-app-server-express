@@ -89,7 +89,6 @@ notificationSchema.statics.findNotificationsByType = async function (
       },
     ]);
 
-    console.log("notifications :>> ", notifications);
     return notifications;
   } catch (error) {
     console.log("error :>> ", error);

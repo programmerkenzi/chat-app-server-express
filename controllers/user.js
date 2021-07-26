@@ -89,7 +89,6 @@ export default {
       const deletedNotifications = await Notifications.deleteNotificationById(
         notificationsId
       );
-      console.log("deletedNotifications :>> ", deletedNotifications);
 
       //emit给目前用户的其他装置
       emitUsersExceptSender(

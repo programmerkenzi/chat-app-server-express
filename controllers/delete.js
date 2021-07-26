@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:22
- * @LastEditTime: 2021-07-21 10:51:04
+ * @LastEditTime: 2021-07-22 17:57:22
  * @LastEditors: Kenzi
  */
 import ChatRoomModel from "../models/ChatRoom.js";
@@ -56,7 +56,6 @@ export default {
         message_ids,
         currentLoginUserId
       );
-
       const messages = await ChatMessageModel.findMessage(message_ids);
 
       //只发送删除自己的讯息id

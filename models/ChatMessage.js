@@ -43,6 +43,8 @@ const chatMessageSchema = new mongoose.Schema(
     post_by_user: { type: String, required: true },
     read_by_recipients: [read_by_recipientSchema],
     delete_by_users: [delete_by_userSchema],
+    forwarded_from_message_ids: Array,
+    reply_for_message_id: String,
   },
   {
     timestamps: true,
@@ -62,15 +64,13 @@ chatMessageSchema.statics.createPostInChatRoom = async function (
   room_id,
   message,
   file,
-  filename,
   user_id
 ) {
   try {
     const post = await this.create({
       chat_room_id: room_id,
-      message: message,
+      message: message ? message : "",
       file: file ? file : [],
-      filename: filename,
       post_by_user: user_id,
       read_by_recipients: { read_by_user_id: user_id },
     });
@@ -96,7 +96,7 @@ chatMessageSchema.statics.createPostInChatRoom = async function (
             },
           ],
 
-          as: "user",
+          as: "post_by_user",
         },
       },
 
@@ -124,7 +124,7 @@ chatMessageSchema.statics.createPostInChatRoom = async function (
           file: "$file",
           read_by_recipients: "$read_by_recipients",
           createdAt: "$createdAt",
-          user: "$user",
+          post_by_user: "$post_by_user",
           filename: "$filename",
         },
       },
@@ -145,7 +145,7 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
   options = {}
 ) {
   try {
-    const conversation = this.aggregate([
+    let conversation = await this.aggregate([
       {
         $match: {
           $expr: {
@@ -170,22 +170,32 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
       {
         $lookup: {
           from: "users",
-          let: { post_by_user: "$post_by_user" },
+          let: {
+            post_by_user: "$post_by_user",
+          },
           pipeline: [
-            { $match: { $expr: { $eq: ["$_id", "$$post_by_user"] } } },
+            {
+              $match: {
+                $expr: {
+                  $or: [{ $eq: ["$_id", "$$post_by_user"] }],
+                },
+              },
+            },
             {
               $project: {
                 _id: "$_id",
                 username: "$username",
                 name: "$name",
+                status: "$status",
                 avatar: "$avatar",
               },
             },
           ],
 
-          as: "user",
+          as: "post_by_user",
         },
       },
+
       {
         $lookup: {
           from: "uploads.files",
@@ -201,6 +211,53 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
             },
           ],
           as: "file",
+        },
+      },
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            reply_for_message_id: "$reply_for_message_id",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$reply_for_message_id"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "reply_for_message",
+        },
+      },
+
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            forwarded_from_message_ids: "$forwarded_from_message_ids",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$_id", "$$forwarded_from_message_ids"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "forwarded_from_messages",
         },
       },
       {
@@ -221,12 +278,15 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
                 read_by_recipients: "$read_by_recipients",
                 delete_by_users: "$delete_by_users",
                 createdAt: "$createdAt",
-                user: "$user",
+                post_by_user: "$post_by_user",
+                forwarded_from_messages: "$forwarded_from_messages",
+                reply_for_message: "$reply_for_message",
               },
             },
           ],
         },
       },
+
       {
         $unwind: "$total",
       },
@@ -259,8 +319,337 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
         },
       },
     ]);
+    const forwardedConversations = await this.aggregate([
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { $eq: [chat_room_id, "$chat_room_id"] },
+              //过滤已删除讯息
+              {
+                $not: {
+                  $in: [current_user_id, "$delete_by_users.delete_by_user_id"],
+                },
+              },
+              {
+                $not: {
+                  $in: ["$post_by_user", "$delete_by_users.delete_by_user_id"],
+                },
+              },
+            ],
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            post_by_user: "$post_by_user",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [{ $eq: ["$_id", "$$post_by_user"] }],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: "$_id",
+                username: "$username",
+                name: "$name",
+                status: "$status",
+                avatar: "$avatar",
+              },
+            },
+          ],
 
-    return conversation;
+          as: "post_by_user",
+        },
+      },
+
+      {
+        $lookup: {
+          from: "uploads.files",
+          let: { file: "$file" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$filename", "$$file"] } } },
+            {
+              $project: {
+                filename: "$filename",
+                mime_type: "$contentType",
+                name: "$metadata.name",
+              },
+            },
+          ],
+          as: "file",
+        },
+      },
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            reply_for_message_id: "$reply_for_message_id",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$reply_for_message_id"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "reply_for_message",
+        },
+      },
+
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            forwarded_from_message_ids: "$forwarded_from_message_ids",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$_id", "$$forwarded_from_message_ids"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "forwarded_from_messages",
+        },
+      },
+
+      { $unwind: "$forwarded_from_messages" },
+
+      {
+        $lookup: {
+          from: "users",
+          let: { post_by_user: "$forwarded_from_messages.post_by_user" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$post_by_user"] } } },
+            {
+              $project: {
+                _id: "$_id",
+                name: "$name",
+              },
+            },
+          ],
+          as: "forwarded_from_messages.post_by_user",
+        },
+      },
+      {
+        $lookup: {
+          from: "uploads.files",
+          let: { file: "$forwarded_from_messages.file" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$filename", "$$file"] } } },
+            {
+              $project: {
+                filename: "$filename",
+                mime_type: "$contentType",
+                name: "$metadata.name",
+              },
+            },
+          ],
+          as: "forwarded_from_messages.file",
+        },
+      },
+
+      {
+        $project: {
+          _id: "$_id",
+          from_id: "$forwarded_from_messages._id",
+          message: "$forwarded_from_messages.message",
+          file: "$forwarded_from_messages.file",
+          post_by_user: "$forwarded_from_messages.post_by_user",
+        },
+      },
+    ]);
+
+    const replyConversations = await this.aggregate([
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { $eq: [chat_room_id, "$chat_room_id"] },
+              //过滤已删除讯息
+              {
+                $not: {
+                  $in: [current_user_id, "$delete_by_users.delete_by_user_id"],
+                },
+              },
+              {
+                $not: {
+                  $in: ["$post_by_user", "$delete_by_users.delete_by_user_id"],
+                },
+              },
+            ],
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            post_by_user: "$post_by_user",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [{ $eq: ["$_id", "$$post_by_user"] }],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: "$_id",
+                username: "$username",
+                name: "$name",
+                status: "$status",
+                avatar: "$avatar",
+              },
+            },
+          ],
+
+          as: "post_by_user",
+        },
+      },
+
+      {
+        $lookup: {
+          from: "uploads.files",
+          let: { file: "$file" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$filename", "$$file"] } } },
+            {
+              $project: {
+                filename: "$filename",
+                mime_type: "$contentType",
+                name: "$metadata.name",
+              },
+            },
+          ],
+          as: "file",
+        },
+      },
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            reply_for_message_id: "$reply_for_message_id",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$reply_for_message_id"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "reply_for_message",
+        },
+      },
+
+      { $unwind: "$reply_for_message" },
+
+      {
+        $lookup: {
+          from: "users",
+          let: { post_by_user: "$reply_for_message.post_by_user" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$post_by_user"] } } },
+            {
+              $project: {
+                _id: "$_id",
+                name: "$name",
+              },
+            },
+          ],
+          as: "reply_for_message.post_by_user",
+        },
+      },
+      {
+        $lookup: {
+          from: "uploads.files",
+          let: { file: "$reply_for_message.file" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$filename", "$$file"] } } },
+            {
+              $project: {
+                filename: "$filename",
+                mime_type: "$contentType",
+                name: "$metadata.name",
+              },
+            },
+          ],
+          as: "reply_for_message.file",
+        },
+      },
+      {
+        $project: {
+          _id: "$_id",
+          from_id: "$reply_for_message._id",
+          message: "$reply_for_message.message",
+          file: "$reply_for_message.file",
+          post_by_user: "$reply_for_message.post_by_user",
+        },
+      },
+    ]);
+
+    //加入轉發與回復訊息info
+    const insertForwardedAndReplyInfo = conversation[0].data.map((msg) => {
+      const { forwarded_from_messages, reply_for_message, _id } = msg;
+
+      let newMsg = { ...msg };
+
+      if (forwarded_from_messages.length) {
+        const forwarded_from_messages_filter = forwardedConversations.filter(
+          (forwardedConversation) => forwardedConversation._id === _id
+        );
+
+        newMsg = {
+          ...msg,
+          forwarded_from_messages: forwarded_from_messages_filter,
+        };
+      }
+      if (reply_for_message.length) {
+        const reply_for_message_filter = replyConversations.filter(
+          (replyConversation) => replyConversation._id === _id
+        );
+
+        newMsg = {
+          ...msg,
+          reply_for_message: reply_for_message_filter,
+        };
+      }
+      return newMsg;
+    });
+
+    return { data: insertForwardedAndReplyInfo, meta: conversation[0].meta };
   } catch (error) {
     console.log("error :>> ", error);
     throw error;
@@ -437,8 +826,39 @@ chatMessageSchema.statics.getRecentConversation = async function (
 };
 chatMessageSchema.statics.findMessage = async function (message_id) {
   try {
-    const message = await this.aggregate([
+    console.log("message_id :>> ", message_id);
+    let conversation = await this.aggregate([
       { $match: { _id: { $in: message_id } } },
+
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            post_by_user: "$post_by_user",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [{ $eq: ["$_id", "$$post_by_user"] }],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: "$_id",
+                username: "$username",
+                name: "$name",
+                status: "$status",
+                avatar: "$avatar",
+              },
+            },
+          ],
+
+          as: "post_by_user",
+        },
+      },
 
       {
         $lookup: {
@@ -448,7 +868,6 @@ chatMessageSchema.statics.findMessage = async function (message_id) {
             { $match: { $expr: { $in: ["$filename", "$$file"] } } },
             {
               $project: {
-                _id: "$_id",
                 filename: "$filename",
                 mime_type: "$contentType",
                 name: "$metadata.name",
@@ -458,9 +877,364 @@ chatMessageSchema.statics.findMessage = async function (message_id) {
           as: "file",
         },
       },
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            reply_for_message_id: "$reply_for_message_id",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$reply_for_message_id"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "reply_for_message",
+        },
+      },
+
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            forwarded_from_message_ids: "$forwarded_from_message_ids",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$_id", "$$forwarded_from_message_ids"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "forwarded_from_messages",
+        },
+      },
+
+      {
+        $project: {
+          _id: "$_id",
+          chat_room_id: "$chat_room_id",
+          message: "$message",
+          file: "$file",
+          filename: "$filename",
+          read_by_recipients: "$read_by_recipients",
+          delete_by_users: "$delete_by_users",
+          createdAt: "$createdAt",
+          post_by_user: "$post_by_user",
+          forwarded_from_messages: "$forwarded_from_messages",
+          reply_for_message: "$reply_for_message",
+        },
+      },
+    ]);
+    const forwardedConversations = await this.aggregate([
+      { $match: { _id: { $in: message_id } } },
+
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            post_by_user: "$post_by_user",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [{ $eq: ["$_id", "$$post_by_user"] }],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: "$_id",
+                username: "$username",
+                name: "$name",
+                status: "$status",
+                avatar: "$avatar",
+              },
+            },
+          ],
+
+          as: "post_by_user",
+        },
+      },
+
+      {
+        $lookup: {
+          from: "uploads.files",
+          let: { file: "$file" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$filename", "$$file"] } } },
+            {
+              $project: {
+                filename: "$filename",
+                mime_type: "$contentType",
+                name: "$metadata.name",
+              },
+            },
+          ],
+          as: "file",
+        },
+      },
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            reply_for_message_id: "$reply_for_message_id",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$reply_for_message_id"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "reply_for_message",
+        },
+      },
+
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            forwarded_from_message_ids: "$forwarded_from_message_ids",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ["$_id", "$$forwarded_from_message_ids"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "forwarded_from_messages",
+        },
+      },
+
+      { $unwind: "$forwarded_from_messages" },
+
+      {
+        $lookup: {
+          from: "users",
+          let: { post_by_user: "$forwarded_from_messages.post_by_user" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$post_by_user"] } } },
+            {
+              $project: {
+                _id: "$_id",
+                name: "$name",
+              },
+            },
+          ],
+          as: "forwarded_from_messages.post_by_user",
+        },
+      },
+      {
+        $lookup: {
+          from: "uploads.files",
+          let: { file: "$forwarded_from_messages.file" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$filename", "$$file"] } } },
+            {
+              $project: {
+                filename: "$filename",
+                mime_type: "$contentType",
+                name: "$metadata.name",
+              },
+            },
+          ],
+          as: "forwarded_from_messages.file",
+        },
+      },
+
+      {
+        $project: {
+          _id: "$_id",
+          from_id: "$forwarded_from_messages._id",
+          message: "$forwarded_from_messages.message",
+          file: "$forwarded_from_messages.file",
+          post_by_user: "$forwarded_from_messages.post_by_user",
+        },
+      },
     ]);
 
-    return message;
+    const replyConversations = await this.aggregate([
+      { $match: { _id: { $in: message_id } } },
+
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: "users",
+          let: {
+            post_by_user: "$post_by_user",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [{ $eq: ["$_id", "$$post_by_user"] }],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: "$_id",
+                username: "$username",
+                name: "$name",
+                status: "$status",
+                avatar: "$avatar",
+              },
+            },
+          ],
+
+          as: "post_by_user",
+        },
+      },
+
+      {
+        $lookup: {
+          from: "uploads.files",
+          let: { file: "$file" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$filename", "$$file"] } } },
+            {
+              $project: {
+                filename: "$filename",
+                mime_type: "$contentType",
+                name: "$metadata.name",
+              },
+            },
+          ],
+          as: "file",
+        },
+      },
+      {
+        $lookup: {
+          from: "chat_messages",
+          let: {
+            reply_for_message_id: "$reply_for_message_id",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$_id", "$$reply_for_message_id"] },
+              },
+            },
+            {
+              $project: {
+                message: "$message",
+                file: "$file",
+                post_by_user: "$post_by_user",
+              },
+            },
+          ],
+          as: "reply_for_message",
+        },
+      },
+
+      { $unwind: "$reply_for_message" },
+
+      {
+        $lookup: {
+          from: "users",
+          let: { post_by_user: "$reply_for_message.post_by_user" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$post_by_user"] } } },
+            {
+              $project: {
+                _id: "$_id",
+                name: "$name",
+              },
+            },
+          ],
+          as: "reply_for_message.post_by_user",
+        },
+      },
+      {
+        $lookup: {
+          from: "uploads.files",
+          let: { file: "$reply_for_message.file" },
+          pipeline: [
+            { $match: { $expr: { $in: ["$filename", "$$file"] } } },
+            {
+              $project: {
+                filename: "$filename",
+                mime_type: "$contentType",
+                name: "$metadata.name",
+              },
+            },
+          ],
+          as: "reply_for_message.file",
+        },
+      },
+      {
+        $project: {
+          _id: "$_id",
+          from_id: "$reply_for_message._id",
+          message: "$reply_for_message.message",
+          file: "$reply_for_message.file",
+          post_by_user: "$reply_for_message.post_by_user",
+        },
+      },
+    ]);
+
+    //加入轉發與回復訊息info
+    const insertForwardedAndReplyInfo = conversation.map((msg) => {
+      const { forwarded_from_messages, reply_for_message, _id } = msg;
+
+      let newMsg = { ...msg };
+
+      if (forwarded_from_messages.length) {
+        const forwarded_from_messages_filter = forwardedConversations.filter(
+          (forwardedConversation) => forwardedConversation._id === _id
+        );
+
+        newMsg = {
+          ...msg,
+          forwarded_from_messages: forwarded_from_messages_filter,
+        };
+      }
+      if (reply_for_message.length) {
+        const reply_for_message_filter = replyConversations.filter(
+          (replyConversation) => replyConversation._id === _id
+        );
+
+        newMsg = {
+          ...msg,
+          reply_for_message: reply_for_message_filter,
+        };
+      }
+      return newMsg;
+    });
+    return insertForwardedAndReplyInfo;
   } catch (error) {
     throw error;
   }
@@ -487,6 +1261,52 @@ chatMessageSchema.statics.deleteMessages = async function (
     );
 
     return update;
+  } catch (error) {
+    throw error;
+  }
+};
+
+chatMessageSchema.statics.forwardMessages = async function (
+  file,
+  message,
+  user_id,
+  to_room_id,
+  message_ids
+) {
+  try {
+    const post = await this.create({
+      chat_room_id: to_room_id,
+      message: message ? message : "",
+      file: file ? file : [],
+      post_by_user: user_id,
+      read_by_recipients: { read_by_user_id: user_id },
+      forwarded_from_message_ids: message_ids,
+    });
+
+    return post;
+  } catch (error) {
+    throw error;
+  }
+};
+
+chatMessageSchema.statics.replyMessage = async function (
+  message,
+  file,
+  user_id,
+  to_room_id,
+  reply_message_id
+) {
+  try {
+    const post = await this.create({
+      chat_room_id: to_room_id,
+      message: message ? message : "",
+      file: file ? file : [],
+      post_by_user: user_id,
+      read_by_recipients: { read_by_user_id: user_id },
+      reply_for_message_id: reply_message_id,
+    });
+
+    return post;
   } catch (error) {
     throw error;
   }

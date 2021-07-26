@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-12 10:38:31
+ * @LastEditTime: 2021-07-22 16:43:32
  * @LastEditors: Kenzi
  */
 import OnlineUsers from "../models/OnlineUsers.js";
@@ -16,7 +16,6 @@ class WebSockets {
       online_users = online_users.filter(
         (user) => user.socket_id !== client.id
       );
-      // console.log(` disconnected client.id`, online_users);
     });
 
     //将用户帐号与socket_id配对在一起作为用户辨识
@@ -38,9 +37,6 @@ class WebSockets {
           device_id: user.device_id,
         });
       }
-
-      // console.log("online_users :>> ", online_users);
-      // Users.findUsersFriends(username);
     });
     // subscribe person to chat & other user as well
     client.on("subscribe", (room, otherUserId = "") => {

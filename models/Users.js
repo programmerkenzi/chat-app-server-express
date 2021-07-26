@@ -93,7 +93,6 @@ userSchema.statics.findUserByUsername = async function (username) {
 };
 
 userSchema.statics.findUsersFriends = async function (user_id) {
-  console.log("user_id :>> ", user_id);
   try {
     const friends_info = await this.aggregate([
       { $match: { _id: user_id } },
