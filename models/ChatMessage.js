@@ -826,7 +826,6 @@ chatMessageSchema.statics.getRecentConversation = async function (
 };
 chatMessageSchema.statics.findMessage = async function (message_id) {
   try {
-    console.log("message_id :>> ", message_id);
     let conversation = await this.aggregate([
       { $match: { _id: { $in: message_id } } },
 

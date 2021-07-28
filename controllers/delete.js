@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:22
- * @LastEditTime: 2021-07-22 17:57:22
+ * @LastEditTime: 2021-07-27 17:27:23
  * @LastEditors: Kenzi
  */
 import ChatRoomModel from "../models/ChatRoom.js";
@@ -44,7 +44,6 @@ export default {
           },
         },
       }));
-
       if (!validation.success)
         return res.status(400).json({ error: validation.error });
 
