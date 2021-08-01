@@ -43,7 +43,7 @@ const chatMessageSchema = new mongoose.Schema(
     post_by_user: { type: String, required: true },
     read_by_recipients: [read_by_recipientSchema],
     delete_by_users: [delete_by_userSchema],
-    forwarded_from_message_ids: Array,
+    forwarded_from_message_ids: { type: Array, default: [] },
     reply_for_message_id: String,
   },
   {
@@ -621,35 +621,46 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
     ]);
 
     //加入轉發與回復訊息info
-    const insertForwardedAndReplyInfo = conversation[0].data.map((msg) => {
-      const { forwarded_from_messages, reply_for_message, _id } = msg;
+    if (conversation.length) {
+      const insertForwardedAndReplyInfo = conversation[0].data.map((msg) => {
+        const { forwarded_from_messages, reply_for_message, _id } = msg;
 
-      let newMsg = { ...msg };
+        let newMsg = { ...msg };
 
-      if (forwarded_from_messages.length) {
-        const forwarded_from_messages_filter = forwardedConversations.filter(
-          (forwardedConversation) => forwardedConversation._id === _id
-        );
+        if (forwarded_from_messages.length) {
+          const forwarded_from_messages_filter = forwardedConversations.filter(
+            (forwardedConversation) => forwardedConversation._id === _id
+          );
 
-        newMsg = {
-          ...msg,
-          forwarded_from_messages: forwarded_from_messages_filter,
-        };
-      }
-      if (reply_for_message.length) {
-        const reply_for_message_filter = replyConversations.filter(
-          (replyConversation) => replyConversation._id === _id
-        );
+          newMsg = {
+            ...msg,
+            forwarded_from_messages: forwarded_from_messages_filter,
+          };
+        }
+        if (reply_for_message.length) {
+          const reply_for_message_filter = replyConversations.filter(
+            (replyConversation) => replyConversation._id === _id
+          );
 
-        newMsg = {
-          ...msg,
-          reply_for_message: reply_for_message_filter,
-        };
-      }
-      return newMsg;
-    });
+          newMsg = {
+            ...msg,
+            reply_for_message: reply_for_message_filter,
+          };
+        }
+        return newMsg;
+      });
+      return { data: insertForwardedAndReplyInfo, meta: conversation[0].meta };
+    }
 
-    return { data: insertForwardedAndReplyInfo, meta: conversation[0].meta };
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        limit: options.limit,
+        page: 1,
+        pages: 1,
+      },
+    };
   } catch (error) {
     console.log("error :>> ", error);
     throw error;
