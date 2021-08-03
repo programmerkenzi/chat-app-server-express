@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:27
- * @LastEditTime: 2021-07-19 14:59:19
+ * @LastEditTime: 2021-08-03 13:56:52
  * @LastEditors: Kenzi
  */
 import express from "express";
@@ -22,6 +22,8 @@ router
         success: true,
         accessToken: "Bearer " + req.accessToken,
         refreshToken: "Bearer " + req.refreshToken,
+        publicKey: req.publicKey,
+        privateKey: req.privateKey,
         userInfo: req.userInfo,
       });
     }

@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-21 17:09:01
+ * @LastEditTime: 2021-08-03 13:56:53
  * @LastEditors: Kenzi
  */
 
@@ -13,6 +13,7 @@ import bcrypt from "bcrypt";
 import { online_users } from "../utils/WebSockets.js";
 import createError from "http-errors";
 import client from "../config/redis.js";
+import naclUtil from "tweetnacl-util";
 
 const accessTokenExpiration = "1h";
 const refreshTokenExpiration = "1y";
@@ -45,7 +46,17 @@ export default {
         const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
           expiresIn: accessTokenExpiration,
         });
+
+        //获取用户的private key
+        const searchRedisKey = naclUtil.encodeBase64(
+          `${username}${hasUser._id}`
+        );
+        const userPrivateKey = await client.get(searchRedisKey);
+        if (!userPrivateKey) return next(createError.Unauthorized());
+
         req.accessToken = accessToken;
+        req.publicKey = hasUser.public_key;
+        req.privateKey = userPrivateKey;
         req.userInfo = {
           _id: hasUser._id,
           avatar: hasUser.avatar,
@@ -137,6 +148,7 @@ export default {
       const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
         expiresIn: refreshTokenExpiration,
       });
+
       const saveToRedis = client.SET(
         user_id,
         refreshToken,

@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-21 15:40:40
+ * @LastEditTime: 2021-08-03 13:37:55
  * @LastEditors: Kenzi
  */
 // utils
@@ -16,6 +16,9 @@ import { online_users } from "./../utils/WebSockets.js";
 import Notifications, { NOTIFICATION_TYPES } from "../models/Notification.js";
 import createError from "http-errors";
 import { emitUsersExceptSender } from "../utils/utils.js";
+import client from "../config/redis.js";
+import nacl from "tweetnacl";
+import naclUtil from "tweetnacl-util";
 
 export default {
   onGetAllUsers: async (req, res) => {
@@ -66,6 +69,7 @@ export default {
         data: friends[0].friends_info,
       });
     } catch (error) {
+      console.log("error :>> ", error);
       return res.status(500).json({ success: false, error: error });
     }
   },
@@ -165,13 +169,34 @@ export default {
       const salt = await bcrypt.genSalt(10);
       const hashPassword = await bcrypt.hash(password, salt);
 
+      //generate keypair
+
+      const keypair = nacl.box.keyPair();
+      const { publicKey, secretKey } = keypair;
+
+      //encode keys
+      const encodedPublicKey = naclUtil.encodeBase64(publicKey);
+      const encodedPrivateKey = naclUtil.encodeBase64(secretKey);
+
       if (!validation.success) return res.status(400).json({ ...validation });
 
-      const user = await Users.createNewUser(username, hashPassword, name);
+      const user = await Users.createNewUser(
+        username,
+        hashPassword,
+        name,
+        encodedPublicKey
+      );
+
+      //store private key to redis
+      const redisKey = naclUtil.encodeBase64(`${username}${user._id}`);
+
+      const saveToRedis = await client.SET(redisKey, encodedPrivateKey);
+
       return res.status(200).json({
         success: true,
       });
     } catch (error) {
+      console.log("error :>> ", error);
       return res.status(500).json({ success: false, error: error });
     }
   },

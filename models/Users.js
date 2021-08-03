@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-14 16:26:35
- * @LastEditTime: 2021-07-21 15:08:11
+ * @LastEditTime: 2021-08-03 13:29:48
  * @LastEditors: Kenzi
  */
 
@@ -19,13 +19,14 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: true, // hash
     },
     avatar: { type: String, default: "" },
     name: { type: String, required: true },
     status: { type: String, default: "" },
     friends: { type: Array, default: [] },
     public_id: { type: String, unique: true }, //用于被陌生用户搜索加好友
+    public_key: { type: String, unique: true }, //hash
   },
   {
     timestamps: true,
@@ -38,13 +39,19 @@ userSchema.plugin(uniqueValidator);
  * @param {String} id - id of user
  * @return {Object}  array of all chatroom that the user belongs to
  */
-userSchema.statics.createNewUser = async function (username, password, name) {
+userSchema.statics.createNewUser = async function (
+  username,
+  password,
+  name,
+  public_key
+) {
   try {
     const user = await this.create({
       username: username,
       password: password,
       name: name,
       public_id: username,
+      public_key: public_key,
     });
     return user;
   } catch (error) {
@@ -71,6 +78,7 @@ userSchema.statics.findUserById = async function (id) {
           status: "$status",
           avatar: "$avatar",
           public_id: "$public_id",
+          public_key: "$public_key",
         },
       },
     ]);

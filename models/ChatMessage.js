@@ -38,7 +38,7 @@ const chatMessageSchema = new mongoose.Schema(
       default: () => uuidv4().replace(/\-/g, ""),
     },
     chat_room_id: { type: String, required: true },
-    message: String,
+    message: Object,
     file: { type: Array, default: [] },
     post_by_user: { type: String, required: true },
     read_by_recipients: [read_by_recipientSchema],
@@ -667,6 +667,12 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
   }
 };
 
+/**
+ * @param {Array} chat_room_ids - chat room ids
+ * @param {{ page, limit }} options - pagination options
+ * @param {String} currentUserOnlineId - user id
+ */
+
 chatMessageSchema.statics.getRecentConversation = async function (
   chatRoom_ids,
   options,
@@ -783,58 +789,6 @@ chatMessageSchema.statics.markMessageRead = async function (
   }
 };
 
-/**
- * @param {Array} chat_room_ids - chat room ids
- * @param {{ page, limit }} options - pagination options
- * @param {String} currentUserOnlineId - user id
- */
-chatMessageSchema.statics.getRecentConversation = async function (
-  chat_room_ids,
-  options,
-  currentUserOnlineId
-) {
-  try {
-    const rooms = this.aggregate([
-      { $match: { chat_room_id: { $in: chat_room_ids } } },
-      {
-        $group: {
-          _id: "$chat_room_id",
-          message_id: { $last: "$_id" },
-          chat_room_id: { $last: "$chat_room_id" },
-          message: { $last: "$message" },
-          type: { $last: "$type" },
-          post_by_user: { $last: "$post_by_user" },
-          created_at: { $last: "$createdAt" },
-          read_by_recipients: { $last: "$read_by_recipients" },
-        },
-      },
-      { $sort: { createdAt: -1 } },
-      {
-        $lookup: {
-          from: "users",
-          localField: "post_by_user",
-          foreignField: "_id",
-          as: "post_by_user",
-        },
-      },
-      { $unwind: "$posted_by_user" },
-      // // do a join on another table called chat_rooms, and
-      // // get me room details
-      {
-        $lookup: {
-          from: "chat_rooms",
-          localField: "chat_room_id",
-          foreignField: "chat_room_id",
-          as: "room_info",
-        },
-      },
-    ]);
-    return rooms;
-  } catch (error) {
-    console.log("error :>> ", error);
-    throw error;
-  }
-};
 chatMessageSchema.statics.findMessage = async function (message_id) {
   try {
     let conversation = await this.aggregate([

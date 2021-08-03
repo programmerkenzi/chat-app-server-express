@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-07-22 10:23:15
+ * @LastEditTime: 2021-08-03 15:14:30
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
@@ -47,7 +47,16 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
           from: "users",
           let: { user_ids: "$user_ids" },
           pipeline: [
-            { $match: { $expr: { $in: ["$_id", "$$user_ids"] } } },
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $in: ["$_id", "$$user_ids"] },
+                    { $not: { $eq: ["$_id", user_id] } },
+                  ],
+                },
+              },
+            },
             {
               $project: {
                 id: "$_id",
@@ -55,11 +64,12 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
                 name: "$name",
                 status: "$status",
                 avatar: "$avatar",
+                public_key: "$public_key",
               },
             },
           ],
 
-          as: "user_info",
+          as: "receivers",
         },
       },
 
@@ -156,7 +166,7 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
                 avatar: "$avatar",
                 type: "$type",
                 description: "$description",
-                users: "$user_info",
+                receivers: "$receivers",
                 last_message: "$last_message",
                 unread: "$unread",
               },
@@ -225,6 +235,7 @@ chatRoomSchema.statics.getChatRoomByRoomId = async function (room_id) {
                 name: "$name",
                 status: "$status",
                 avatar: "$avatar",
+                public_key: "$public_key",
               },
             },
           ],
