@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-08-03 15:14:30
+ * @LastEditTime: 2021-08-05 12:00:50
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
@@ -218,7 +218,7 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
  * @param {String} room_id - id of chatroom
  * @return {Object} chatroom
  */
-chatRoomSchema.statics.getChatRoomByRoomId = async function (room_id) {
+chatRoomSchema.statics.getChatRoomByRoomId = async function (user_id, room_id) {
   try {
     const room_info = await this.aggregate([
       { $match: { _id: room_id } },
@@ -227,7 +227,17 @@ chatRoomSchema.statics.getChatRoomByRoomId = async function (room_id) {
           from: "users",
           let: { user_ids: "$user_ids" },
           pipeline: [
-            { $match: { $expr: { $in: ["$_id", "$$user_ids"] } } },
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $in: ["$_id", "$$user_ids"] },
+                    { $not: { $eq: ["$_id", user_id] } },
+                  ],
+                },
+              },
+            },
+
             {
               $project: {
                 id: "$_id",
@@ -240,7 +250,7 @@ chatRoomSchema.statics.getChatRoomByRoomId = async function (room_id) {
             },
           ],
 
-          as: "user_info",
+          as: "receivers",
         },
       },
       {
@@ -252,7 +262,7 @@ chatRoomSchema.statics.getChatRoomByRoomId = async function (room_id) {
           name: "$name",
           type: "$type",
           description: "$description",
-          users: "$user_info",
+          receivers: "$receivers",
         },
       },
     ]);

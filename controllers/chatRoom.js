@@ -32,6 +32,7 @@ export default {
         currentLoggedUser
       );
       const room_info = await ChatRoomModel.getChatRoomByRoomId(
+        currentLoggedUser,
         chatRoom.room_info._id
       );
 
