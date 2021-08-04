@@ -18,6 +18,8 @@ router
   .post("/:room_id/message", chatRoom.postMessage)
   .put("/:room_id/mark-read", chatRoom.markConversationReadByRoomId)
   .post("/:room_id/forward_messages", chatRoom.forwardMessages)
-  .post("/:room_id/reply_message", chatRoom.replyMessage);
+  .post("/:room_id/reply_message", chatRoom.replyMessage)
+  .put("/:room_id/pin-message/:message_id", chatRoom.pinMessage)
+  .put("/:room_id/cancel-pin-message/:message_id", chatRoom.cancelPinMessage);
 
 export default router;

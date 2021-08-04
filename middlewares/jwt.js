@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-08-03 13:56:53
+ * @LastEditTime: 2021-08-04 14:24:54
  * @LastEditors: Kenzi
  */
 
@@ -36,7 +36,6 @@ export default {
         //核对密码
         const validPass = bcrypt.compareSync(password, hasUser.password);
         if (!validPass) return next(createError(400, "Password is wrong"));
-
         const payload = {
           user_id: hasUser._id,
         };
@@ -51,7 +50,8 @@ export default {
         const searchRedisKey = naclUtil.encodeBase64(
           `${username}${hasUser._id}`
         );
-        const userPrivateKey = await client.get(searchRedisKey);
+
+        const userPrivateKey = await client.GET(searchRedisKey);
         if (!userPrivateKey) return next(createError.Unauthorized());
 
         req.accessToken = accessToken;
@@ -69,7 +69,7 @@ export default {
         return next(createError(400, "Username is wrong or no such user"));
       }
 
-      next();
+      return next();
     } catch (error) {
       console.log("error :>> ", error);
       return next(createError.InternalServerError());
@@ -166,6 +166,8 @@ export default {
   },
 
   verifyAccessTokenFromUrl: (req, res, next) => {
+    console.log("req.headers :>> ", req.headers);
+
     if (!req.params.token) {
       return res
         .status(400)

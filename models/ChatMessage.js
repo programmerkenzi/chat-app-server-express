@@ -45,6 +45,7 @@ const chatMessageSchema = new mongoose.Schema(
     delete_by_users: [delete_by_userSchema],
     forwarded_from_message_ids: { type: Array, default: [] },
     reply_for_message_id: String,
+    pin: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -281,6 +282,7 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
                 post_by_user: "$post_by_user",
                 forwarded_from_messages: "$forwarded_from_messages",
                 reply_for_message: "$reply_for_message",
+                pin: "$pin",
               },
             },
           ],
@@ -1274,6 +1276,44 @@ chatMessageSchema.statics.replyMessage = async function (
   } catch (error) {
     throw error;
   }
+};
+
+chatMessageSchema.statics.pinMessage = async function (
+  chat_room_id,
+  message_id
+) {
+  const update = await this.updateMany(
+    {
+      _id: message_id,
+      chat_room_id: chat_room_id,
+    },
+    {
+      $set: { pin: true },
+    },
+    {
+      multi: true,
+    }
+  );
+  return update;
+};
+
+chatMessageSchema.statics.cancelPinMessage = async function (
+  chat_room_id,
+  message_id
+) {
+  const update = await this.updateMany(
+    {
+      _id: message_id,
+      chat_room_id: chat_room_id,
+    },
+    {
+      $set: { pin: false },
+    },
+    {
+      multi: true,
+    }
+  );
+  return update;
 };
 
 export default mongoose.model("ChatMessage", chatMessageSchema);

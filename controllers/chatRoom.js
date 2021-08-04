@@ -269,4 +269,38 @@ export default {
       return next(createError.InternalServerError());
     }
   },
+
+  pinMessage: async (req, res, next) => {
+    try {
+      const { room_id, message_id } = req.params;
+
+      const pinMessage = await ChatMessageModel.pinMessage(room_id, message_id);
+
+      return res.status(200).json({
+        success: true,
+        data: { success: true, data: pinMessage },
+      });
+    } catch (error) {
+      console.log(error);
+      return next(createError.InternalServerError());
+    }
+  },
+  cancelPinMessage: async (req, res, next) => {
+    try {
+      const { room_id, message_id } = req.params;
+
+      const pinMessage = await ChatMessageModel.cancelPinMessage(
+        room_id,
+        message_id
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: { success: true, data: pinMessage },
+      });
+    } catch (error) {
+      console.log(error);
+      return next(createError.InternalServerError());
+    }
+  },
 };
