@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-08-03 13:37:55
+ * @LastEditTime: 2021-08-05 17:30:40
  * @LastEditors: Kenzi
  */
 // utils
@@ -80,7 +80,9 @@ export default {
       const currentLoggedUserSocketId = req.socket_id;
       const notificationsId = req.body.notification_id;
       const addUserPublicId = req.params.public_id;
+
       const addUser = await Users.findUsersByPublicId(addUserPublicId);
+
       if (!addUser.length) return res(createError(400, "wrong public_id"));
       const addFriends = await Users.addNewFriend(
         currentLoggedUser,

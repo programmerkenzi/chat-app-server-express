@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:22
- * @LastEditTime: 2021-07-27 17:27:23
+ * @LastEditTime: 2021-08-05 17:28:32
  * @LastEditors: Kenzi
  */
 import ChatRoomModel from "../models/ChatRoom.js";
@@ -17,6 +17,14 @@ export default {
   deleteRoomById: async (req, res) => {
     try {
       const { roomId } = req.params;
+      const currentLoggedUser = req.user_id;
+
+      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
+        to_room_id
+      );
+      if (!user_ids || !user_ids.includes(currentLoggedUser))
+        return next(createError.BadRequest());
+
       const room = await ChatRoomModel.remove({ _id: roomId });
       const messages = await ChatMessageModel.remove({ chatRoomId: roomId });
       return res.status(200).json({
@@ -33,6 +41,7 @@ export default {
     try {
       const { message_ids } = req.body;
       const { room_id } = req.params;
+
       const currentLoginUserId = req.user_id;
       const currentLoginSocketId = req.socket_id;
       const validation = makeValidation((types) => ({
@@ -48,8 +57,10 @@ export default {
         return res.status(400).json({ error: validation.error });
 
       const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
-        room_id
+        to_room_id
       );
+      if (!user_ids || !user_ids.includes(currentLoginUserId))
+        return next(createError.BadRequest());
 
       const deleteAllMessages = await ChatMessageModel.deleteMessages(
         message_ids,

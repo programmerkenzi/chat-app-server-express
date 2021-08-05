@@ -132,7 +132,6 @@ chatMessageSchema.statics.createPostInChatRoom = async function (
     ]);
     return messageInfo;
   } catch (error) {
-    console.log("error :>> ", error);
     throw error;
   }
 };
@@ -664,7 +663,6 @@ chatMessageSchema.statics.getConversationByRoomId = async function (
       },
     };
   } catch (error) {
-    console.log("error :>> ", error);
     throw error;
   }
 };
@@ -1201,6 +1199,37 @@ chatMessageSchema.statics.findMessage = async function (message_id) {
       return newMsg;
     });
     return insertForwardedAndReplyInfo;
+  } catch (error) {
+    throw error;
+  }
+};
+
+chatMessageSchema.statics.findLastPinMessageByRoomId = async function (
+  room_id
+) {
+  try {
+    let conversation = await this.aggregate([
+      {
+        $match: {
+          $expr: {
+            $and: [
+              { $eq: ["$chat_room_id", room_id] },
+              { $eq: ["$pin", true] },
+            ],
+          },
+        },
+      },
+
+      { $limit: 1 },
+
+      {
+        $project: {
+          createdAt: "$createdAt",
+        },
+      },
+    ]);
+
+    return conversation;
   } catch (error) {
     throw error;
   }

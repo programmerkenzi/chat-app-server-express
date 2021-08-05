@@ -9,6 +9,7 @@ import { emitUsersExceptSender } from "./../utils/utils.js";
 import { gfs } from "../config/mongo.js";
 import createError from "http-errors";
 
+import { fetchConversationsIncludedPinnedMessages } from "../library/chatRoom.js";
 export default {
   initiate: async (req, res) => {
     try {
@@ -53,6 +54,12 @@ export default {
         room_id
       );
       const currentLoggedUser = req.user_id;
+
+      if (!user_ids) return next(createError.BadRequest());
+
+      if (!user_ids.includes(currentLoggedUser))
+        return next(createError.BadRequest());
+
       const currentLoggedUserSocketId = req.socket_id;
 
       const post = await ChatMessageModel.createPostInChatRoom(
@@ -91,32 +98,67 @@ export default {
 
       return res.status(200).json({ success: true, data: rooms[0] });
     } catch (error) {
-      console.log("error :>> ", error);
-      return res.status(500).json({ success: false, error: error });
+      return next(createError.InternalServerError());
     }
   },
-  getConversationByRoomId: async (req, res) => {
+  getConversationByRoomId: async (req, res, next) => {
     try {
       const { room_id } = req.params;
       const currentLoggedUser = req.user_id;
-      //分页
+      // 分页
       const options = {
         page: parseInt(req.query.page) || 0,
         limit: parseInt(req.query.limit) || 10,
       };
-      const conversations = await ChatMessageModel.getConversationByRoomId(
-        room_id,
+
+      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
+        room_id
+      );
+      if (!user_ids || !user_ids.includes(currentLoggedUser))
+        return next(createError.BadRequest());
+
+      const room_info = await ChatRoomModel.getChatRoomByRoomId(
         currentLoggedUser,
-        options
+        room_id
       );
 
-      return res.status(200).json({
-        success: true,
-        data: conversations,
-      });
+      if (!room_info) return next(createError.BadRequest());
+
+      let conversations = null;
+
+      //尋找創建時間最早的Pin的訊息
+      const firstPinnedMessage =
+        await ChatMessageModel.findLastPinMessageByRoomId(room_id);
+
+      //如果是fetch第一頁訊息時確保包含所有pin的訊息
+      if (firstPinnedMessage.length > 0 && options.page === 0) {
+        const firstPinnedMessageId = firstPinnedMessage[0]._id;
+        conversations = await fetchConversationsIncludedPinnedMessages(
+          room_id,
+          currentLoggedUser,
+          firstPinnedMessageId,
+          options
+        );
+      } else {
+        conversations = await ChatMessageModel.getConversationByRoomId(
+          room_id,
+          currentLoggedUser,
+          options
+        );
+      }
+
+      if (conversations)
+        return res.status(200).json({
+          success: true,
+          data: {
+            ...conversations,
+            firstPinnedMessageId:
+              firstPinnedMessage.length > 0 ? firstPinnedMessage[0]._id : null,
+          },
+        });
     } catch (error) {
       console.log("error :>> ", error);
-      return res.status(500).json({ success: false, error: error });
+      return next(createError.InternalServerError());
     }
   },
   markConversationReadByRoomId: async (req, res) => {
@@ -124,6 +166,13 @@ export default {
       const { room_id } = req.params;
       const currentLoggedUser = req.user_id;
       const currentLoggedUserSocketId = req.socket_id;
+      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
+        room_id
+      );
+
+      if (!user_ids || !user_ids.includes(currentLoggedUser))
+        return next(createError.BadRequest());
+
       const result = await ChatMessageModel.markMessageRead(
         room_id,
         currentLoggedUser
@@ -132,10 +181,6 @@ export default {
 
       //如果成功修改
       if (ok && nModified > 0) {
-        const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
-          room_id
-        );
-
         emitUsersExceptSender(
           currentLoggedUserSocketId,
           user_ids,
@@ -152,7 +197,7 @@ export default {
       });
     } catch (error) {
       console.log(error);
-      return res.status(500).json({ success: false, error });
+      return next(createError.InternalServerError());
     }
   },
   forwardMessages: async (req, res, next) => {
@@ -176,6 +221,17 @@ export default {
       if (!to_room_id)
         return res.status(400).json({ error: "pls provide room_id" });
 
+      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
+        to_room_id
+      );
+      if (!user_ids || !user_ids.includes(currentLoggedUser))
+        return next(createError.BadRequest());
+
+      const findMessage = await ChatMessageModel.findMessage(message_ids);
+
+      if (findMessage.length !== message_ids.length)
+        return next(createError.BadRequest());
+
       //建立新讯息
       const createForwardMessages = await ChatMessageModel.forwardMessages(
         file,
@@ -191,9 +247,6 @@ export default {
       ]);
 
       //emit 房间用户
-      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
-        to_room_id
-      );
 
       if (user_ids) {
         emitUsersExceptSender(
@@ -233,6 +286,15 @@ export default {
       if (!to_room_id)
         return res.status(400).json({ error: "pls provide room_id" });
 
+      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
+        to_room_id
+      );
+      if (!user_ids || !user_ids.includes(currentLoggedUser))
+        return next(createError.BadRequest());
+
+      const findMessage = await ChatMessageModel.findMessage([message_id]);
+      if (findMessage.length === 0) return next(createError.BadRequest());
+
       //建立新讯息
       const createReplyMessages = await ChatMessageModel.replyMessage(
         message,
@@ -248,10 +310,6 @@ export default {
       ]);
 
       //emit 房间用户
-      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
-        to_room_id
-      );
-
       if (user_ids) {
         emitUsersExceptSender(
           currentLoggedUserSocketId,
@@ -275,8 +333,36 @@ export default {
     try {
       const { room_id, message_id } = req.params;
 
+      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
+        room_id
+      );
+
+      const currentLoggedUser = req.user_id;
+
+      if (!user_ids || !user_ids.includes(currentLoggedUser))
+        return next(createError.BadRequest());
+
       const pinMessage = await ChatMessageModel.pinMessage(room_id, message_id);
 
+      if (pinMessage.success) {
+      }
+
+      const { ok, nModified } = await pinMessage;
+
+      const currentLoggedUserSocketId = req.socket_id;
+
+      //如果成功修改
+      if (ok && nModified > 0) {
+        emitUsersExceptSender(
+          currentLoggedUserSocketId,
+          user_ids,
+          "pinned_message",
+          {
+            chat_room_id: room_id,
+            message_id: message_id,
+          }
+        );
+      }
       return res.status(200).json({
         success: true,
         data: { success: true, data: pinMessage },
@@ -290,14 +376,40 @@ export default {
     try {
       const { room_id, message_id } = req.params;
 
-      const pinMessage = await ChatMessageModel.cancelPinMessage(
+      const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
+        room_id
+      );
+
+      const currentLoggedUser = req.user_id;
+
+      if (!user_ids || !user_ids.includes(currentLoggedUser))
+        return next(createError.BadRequest());
+
+      const unpinMessage = await ChatMessageModel.cancelPinMessage(
         room_id,
         message_id
       );
 
+      const { ok, nModified } = await unpinMessage;
+
+      const currentLoggedUserSocketId = req.socket_id;
+
+      //如果成功修改
+      if (ok && nModified > 0) {
+        emitUsersExceptSender(
+          currentLoggedUserSocketId,
+          user_ids,
+          "unpinned_message",
+          {
+            chat_room_id: room_id,
+            message_id: message_id,
+          }
+        );
+      }
+
       return res.status(200).json({
         success: true,
-        data: { success: true, data: pinMessage },
+        data: { success: true, data: unpinMessage },
       });
     } catch (error) {
       console.log(error);

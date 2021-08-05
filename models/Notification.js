@@ -91,7 +91,6 @@ notificationSchema.statics.findNotificationsByType = async function (
 
     return notifications;
   } catch (error) {
-    console.log("error :>> ", error);
     throw error;
   }
 };
@@ -137,7 +136,6 @@ notificationSchema.statics.findNotificationsByUserId = async function (
 
     return notifications;
   } catch (error) {
-    console.log("error :>> ", error);
     throw error;
   }
 };

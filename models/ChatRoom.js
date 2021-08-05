@@ -209,7 +209,6 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
 
     return rooms_info;
   } catch (error) {
-    console.log("error :>> ", error);
     throw error;
   }
 };
@@ -281,7 +280,6 @@ chatRoomSchema.statics.getChatRoomUsersByRoomId = async function (room_id) {
     ]);
     return room[0];
   } catch (error) {
-    console.log("error :>> ", error);
     throw error;
   }
 };

@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:27
- * @LastEditTime: 2021-07-22 17:29:05
+ * @LastEditTime: 2021-08-05 15:05:35
  * @LastEditors: Kenzi
  */
 import express from "express";
@@ -20,6 +20,6 @@ router
   .post("/:room_id/forward_messages", chatRoom.forwardMessages)
   .post("/:room_id/reply_message", chatRoom.replyMessage)
   .put("/:room_id/pin-message/:message_id", chatRoom.pinMessage)
-  .put("/:room_id/cancel-pin-message/:message_id", chatRoom.cancelPinMessage);
+  .put("/:room_id/unpin-message/:message_id", chatRoom.cancelPinMessage);
 
 export default router;
