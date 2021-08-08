@@ -3,6 +3,7 @@ import makeValidation from "@withvoid/make-validation";
 // models
 import ChatRoomModel, { CHAT_ROOM_TYPES } from "../models/ChatRoom.js";
 import ChatMessageModel from "../models/ChatMessage.js";
+import UsersModel from "../models/Users.js";
 import fs from "../controllers/fs.js";
 
 import { emitUsersExceptSender } from "./../utils/utils.js";
@@ -10,8 +11,12 @@ import { gfs } from "../config/mongo.js";
 import createError from "http-errors";
 
 import { fetchConversationsIncludedPinnedMessages } from "../library/chatRoom.js";
+import nacl from "tweetnacl";
+import naclUtil from "tweetnacl-util";
+import client from "../config/redis.js";
+
 export default {
-  initiate: async (req, res) => {
+  initiate: async (req, res, next) => {
     try {
       const validation = makeValidation((types) => ({
         payload: req.body,
@@ -24,24 +29,51 @@ export default {
         },
       }));
       if (!validation.success) return res.status(400).json({ ...validation });
-
       const currentLoggedUser = req.user_id;
       const { user_ids, type } = req.body;
-      const chatRoom = await ChatRoomModel.initiateChat(
-        user_ids,
-        type,
-        currentLoggedUser
-      );
-      const room_info = await ChatRoomModel.getChatRoomByRoomId(
-        currentLoggedUser,
-        chatRoom.room_info._id
-      );
+      let chatRoom = null;
 
-      return res.status(200).json({
-        success: true,
-        data: { room_info: room_info },
-      });
+      if (req.body.type === CHAT_ROOM_TYPES.GROUP) {
+        if (!req.body.name)
+          return next(createError("400", "pls provide group name"));
+
+        //keypair for group chat
+        const keypair = nacl.sign.keyPair();
+        const { publicKey, secretKey } = keypair;
+
+        const encodedPublicKey = naclUtil.encodeBase64(publicKey);
+        const encodedPrivateKey = naclUtil.encodeBase64(secretKey);
+
+        chatRoom = await ChatRoomModel.initiateChat(
+          user_ids,
+          type,
+          currentLoggedUser,
+          req.body.name,
+          req.body.avatar,
+          req.body.description,
+          { key1: encodedPublicKey, key2: encodedPrivateKey }
+        );
+      } else {
+        chatRoom = await ChatRoomModel.initiateChat(
+          user_ids,
+          type,
+          currentLoggedUser
+        );
+      }
+
+      if (chatRoom) {
+        const room_info = await ChatRoomModel.getChatRoomByRoomId(
+          currentLoggedUser,
+          chatRoom.room_info._id
+        );
+
+        return res.status(200).json({
+          success: true,
+          data: { room_info: room_info },
+        });
+      }
     } catch (error) {
+      console.log("error :>> ", error);
       return res.status(500).json({ success: false, error: error });
     }
   },
@@ -91,7 +123,7 @@ export default {
         page: parseInt(req.query.page) || 0,
         limit: parseInt(req.query.limit) || 10,
       };
-      const rooms = await ChatRoomModel.getChatRoomsByUserId(
+      let rooms = await ChatRoomModel.getChatRoomsByUserId(
         currentLoggedUser,
         options
       );

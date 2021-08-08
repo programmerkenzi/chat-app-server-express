@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-14 16:26:35
- * @LastEditTime: 2021-08-03 13:29:48
+ * @LastEditTime: 2021-08-07 10:12:37
  * @LastEditors: Kenzi
  */
 
@@ -26,7 +26,8 @@ const userSchema = new mongoose.Schema(
     status: { type: String, default: "" },
     friends: { type: Array, default: [] },
     public_id: { type: String, unique: true }, //用于被陌生用户搜索加好友
-    public_key: { type: String, unique: true }, //hash
+    public_key: { type: String, unique: true }, //用於私人聊天
+    public_key_group: { type: String, unique: true }, //用於群組聊天
   },
   {
     timestamps: true,
@@ -43,7 +44,8 @@ userSchema.statics.createNewUser = async function (
   username,
   password,
   name,
-  public_key
+  public_key,
+  public_key_group
 ) {
   try {
     const user = await this.create({
@@ -52,6 +54,7 @@ userSchema.statics.createNewUser = async function (
       name: name,
       public_id: username,
       public_key: public_key,
+      public_key_group: public_key_group,
     });
     return user;
   } catch (error) {
@@ -79,6 +82,29 @@ userSchema.statics.findUserById = async function (id) {
           avatar: "$avatar",
           public_id: "$public_id",
           public_key: "$public_key",
+          public_key_group: "$public_key_group",
+        },
+      },
+    ]);
+    return user;
+  } catch (error) {
+    console.log("error :>> ", error);
+    throw error;
+  }
+};
+
+//獲取多個用戶訊息
+userSchema.statics.findUserByIds = async function (ids) {
+  try {
+    const user = await this.aggregate([
+      { $match: { $expr: { $in: ["$_id", ids] } } },
+      {
+        $project: {
+          _id: "$_id",
+          username: "$username",
+          name: "$name",
+          status: "$status",
+          avatar: "$avatar",
         },
       },
     ]);

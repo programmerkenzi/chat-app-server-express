@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-08-04 14:24:54
+ * @LastEditTime: 2021-08-07 09:14:06
  * @LastEditors: Kenzi
  */
 
@@ -32,6 +32,8 @@ export default {
       const { username, password, device_id } = req.body;
       //查找用户
       const hasUser = await user.onGetUserByUsername(username);
+
+      console.log("hasUser :>> ", hasUser);
       if (hasUser) {
         //核对密码
         const validPass = bcrypt.compareSync(password, hasUser.password);
@@ -52,11 +54,21 @@ export default {
         );
 
         const userPrivateKey = await client.GET(searchRedisKey);
-        if (!userPrivateKey) return next(createError.Unauthorized());
+
+        //獲取用戶的private key for group chatRoom
+        const searchRedisKeyForGroup = naclUtil.encodeBase64(
+          `${username}${hasUser._id}Group`
+        );
+        const userPrivateKeyForGroup = await client.GET(searchRedisKeyForGroup);
+
+        // if (!userPrivateKey || !userPrivateKeyForGroup)
+        //   return next(createError.Unauthorized());
 
         req.accessToken = accessToken;
         req.publicKey = hasUser.public_key;
+        req.publicKeyGroup = hasUser.public_key_group;
         req.privateKey = userPrivateKey;
+        req.privateKeyGroup = userPrivateKeyForGroup;
         req.userInfo = {
           _id: hasUser._id,
           avatar: hasUser.avatar,

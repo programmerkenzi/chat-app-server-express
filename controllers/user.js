@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-08-05 17:30:40
+ * @LastEditTime: 2021-08-07 08:58:32
  * @LastEditors: Kenzi
  */
 // utils
@@ -171,7 +171,7 @@ export default {
       const salt = await bcrypt.genSalt(10);
       const hashPassword = await bcrypt.hash(password, salt);
 
-      //generate keypair
+      //generate keypair  for  private chat
 
       const keypair = nacl.box.keyPair();
       const { publicKey, secretKey } = keypair;
@@ -182,17 +182,37 @@ export default {
 
       if (!validation.success) return res.status(400).json({ ...validation });
 
+      ////generate keypair  for  group chat
+
+      const keypairForGroup = nacl.sign.keyPair();
+      const publicKeyForGroup = keypairForGroup.publicKey;
+      const privateKeyForGroup = keypairForGroup.secretKey;
+      const encodedPublicKeyForGroup = naclUtil.encodeBase64(publicKeyForGroup);
+      const encodedPrivateKeyForGroup =
+        naclUtil.encodeBase64(privateKeyForGroup);
+
       const user = await Users.createNewUser(
         username,
         hashPassword,
         name,
-        encodedPublicKey
+        encodedPublicKey,
+        encodedPublicKeyForGroup
       );
 
-      //store private key to redis
+      //store private key  for private chat to redis
       const redisKey = naclUtil.encodeBase64(`${username}${user._id}`);
-
       const saveToRedis = await client.SET(redisKey, encodedPrivateKey);
+
+      //store private key  for group chat to redis
+
+      const redisKeyForGroup = naclUtil.encodeBase64(
+        `${username}${user._id}Group`
+      );
+
+      const saveToRedisGroup = await client.SET(
+        redisKeyForGroup,
+        encodedPrivateKeyForGroup
+      );
 
       return res.status(200).json({
         success: true,

@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-08-05 12:00:50
+ * @LastEditTime: 2021-08-07 17:45:29
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
@@ -22,7 +22,8 @@ const chatRoomSchema = new mongoose.Schema(
     avatar: { type: String, default: "" },
     type: { type: String, default: "private", enum: ["group", "private"] },
     description: { type: String, default: "" },
-    user_ids: Array,
+    key: { type: Object, required: true },
+    user_ids: { type: Array, required: true },
   },
   {
     timestamps: true,
@@ -169,6 +170,7 @@ chatRoomSchema.statics.getChatRoomsByUserId = async function (
                 receivers: "$receivers",
                 last_message: "$last_message",
                 unread: "$unread",
+                key: "$key",
               },
             },
           ],
@@ -262,6 +264,7 @@ chatRoomSchema.statics.getChatRoomByRoomId = async function (user_id, room_id) {
           type: "$type",
           description: "$description",
           receivers: "$receivers",
+          key: "$key",
         },
       },
     ]);
@@ -290,15 +293,25 @@ chatRoomSchema.statics.getChatRoomUsersByRoomId = async function (room_id) {
  * @param {String} creator - user who initiated the chat
  * @param {CHAT_ROOM_TYPES} type
  */
-chatRoomSchema.statics.initiateChat = async function (user_ids, type, creator) {
+chatRoomSchema.statics.initiateChat = async function (
+  user_ids,
+  type,
+  creator,
+  name,
+  avatar,
+  description,
+  key
+) {
   try {
     const availableRoom = await this.findOne({
       user_ids: {
         $size: user_ids.length,
         $all: [...user_ids],
       },
+      name,
       type,
     });
+
     if (availableRoom) {
       return {
         is_new: false,
@@ -306,7 +319,15 @@ chatRoomSchema.statics.initiateChat = async function (user_ids, type, creator) {
       };
     }
 
-    const newRoom = await this.create({ user_ids, type, creator });
+    const newRoom = await this.create({
+      user_ids: user_ids,
+      type: type,
+      creator: creator,
+      name: name ? name : "",
+      avatar: avatar ? avatar : "",
+      description: description ? description : "",
+      key: key,
+    });
     if (newRoom) {
       return {
         is_new: true,
