@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-16 10:28:22
- * @LastEditTime: 2021-08-09 09:49:04
+ * @LastEditTime: 2021-08-09 10:24:54
  * @LastEditors: Kenzi
  */
 import http from "http";
@@ -38,7 +38,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false, limit: "100mb" }));
 
 app.use("/", indexRouter);
-app.use("/users", userRouter);
+app.use("/users", decode.verifyAccessToken, userRouter);
 app.use("/room", decode.verifyAccessToken, chatRoomRouter);
 app.use("/notification", decode.verifyAccessToken, notificationRouter);
 app.use("/fs", fsRouter);
