@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-08-07 17:45:29
+ * @LastEditTime: 2021-08-09 13:12:01
  * @LastEditors: Kenzi
  */
 import mongoose from "mongoose";
@@ -19,7 +19,7 @@ const chatRoomSchema = new mongoose.Schema(
     _id: { type: String, default: () => uuidv4().replace(/\-/g, "") },
     name: { type: String, default: "" },
     creator: String,
-    avatar: { type: String, default: "" },
+    background: { type: String, default: "" },
     type: { type: String, default: "private", enum: ["group", "private"] },
     description: { type: String, default: "" },
     key: { type: Object, required: true },
@@ -336,6 +336,22 @@ chatRoomSchema.statics.initiateChat = async function (
     }
   } catch (error) {
     console.log("error on start chat method", error);
+    throw error;
+  }
+};
+
+chatRoomSchema.statics.updateBackground = async function (room_id, filename) {
+  try {
+    const update = await this.update(
+      { _id: room_id },
+      {
+        $set: {
+          background: filename,
+        },
+      }
+    );
+    return update;
+  } catch (error) {
     throw error;
   }
 };

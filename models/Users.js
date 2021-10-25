@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-14 16:26:35
- * @LastEditTime: 2021-08-07 10:12:37
+ * @LastEditTime: 2021-08-09 12:54:59
  * @LastEditors: Kenzi
  */
 
@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema(
       required: true, // hash
     },
     avatar: { type: String, default: "" },
+    background: { type: String, default: "" },
     name: { type: String, required: true },
     status: { type: String, default: "" },
     friends: { type: Array, default: [] },
@@ -229,6 +230,38 @@ userSchema.statics.findUsersByPublicId = async function (user_public_id) {
     return user;
   } catch (error) {
     console.log("error :>> ", error);
+    throw error;
+  }
+};
+
+userSchema.statics.updateAvatar = async function (user_id, filename) {
+  try {
+    const update = await this.update(
+      { _id: user_id },
+      {
+        $set: {
+          avatar: filename,
+        },
+      }
+    );
+    return update;
+  } catch (error) {
+    throw error;
+  }
+};
+
+userSchema.statics.updateBackground = async function (user_id, filename) {
+  try {
+    const update = await this.update(
+      { _id: user_id },
+      {
+        $set: {
+          background: filename,
+        },
+      }
+    );
+    return update;
+  } catch (error) {
     throw error;
   }
 };

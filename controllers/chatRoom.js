@@ -448,4 +448,58 @@ export default {
       return next(createError.InternalServerError());
     }
   },
+
+  updateBackground: async (req, res, next) => {
+    try {
+      const validation = makeValidation((types) => ({
+        payload: req.body,
+        checks: {
+          filename: {
+            type: types.string,
+          },
+        },
+      }));
+      if (!validation.success)
+        return next(createError(400, "pls provide filename"));
+
+      const { room_id } = req.params;
+
+      const { user_ids, type } = await ChatRoomModel.getChatRoomUsersByRoomId(
+        room_id
+      );
+      const currentLoggedUser = req.user_id;
+
+      if (
+        !user_ids ||
+        !user_ids.includes(currentLoggedUser) ||
+        type !== "group"
+      )
+        return next(createError.BadRequest());
+
+      const { filename } = req.body;
+      const updateBackground = await ChatRoomModel.updateBackground(
+        room_id,
+        filename
+      );
+      const { ok, nModified } = await updateBackground;
+      const currentLoggedUserSocketId = req.socket_id;
+      //如果成功修改;
+      if (ok && nModified > 0) {
+        emitUsersExceptSender(
+          currentLoggedUserSocketId,
+          user_ids,
+          "update_group_background",
+          {
+            room_id: room_id,
+            filename: filename,
+          }
+        );
+      }
+
+      return res.status(200).json({ updateBackground });
+    } catch (error) {
+      console.log("error :>> ", error);
+      return next(createError.InternalServerError());
+    }
+  },
 };

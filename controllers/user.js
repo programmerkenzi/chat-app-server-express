@@ -2,7 +2,7 @@
  * @Description:
  * @Author: Kenzi
  * @Date: 2021-06-10 18:32:02
- * @LastEditTime: 2021-08-07 08:58:32
+ * @LastEditTime: 2021-08-10 08:54:25
  * @LastEditors: Kenzi
  */
 // utils
@@ -237,6 +237,84 @@ export default {
     } catch (error) {
       console.log("error :>> ", error);
       return res.status(500).json({ success: false, error: error });
+    }
+  },
+  onUpdateUserAvatar: async (req, res, next) => {
+    try {
+      const validation = makeValidation((types) => ({
+        payload: req.body,
+        checks: {
+          filename: {
+            type: types.string,
+          },
+        },
+      }));
+      if (!validation.success)
+        return next(createError(400, "pls provide filename"));
+
+      const { filename } = req.body;
+      const currentLoggedUser = req.user_id;
+      const updateAvatar = await Users.updateAvatar(
+        currentLoggedUser,
+        filename
+      );
+      const { ok, nModified } = await updateAvatar;
+      //const currentLoggedUserSocketId = req.socket_id;
+      //如果成功修改
+      //  if (ok && nModified > 0) {
+      //   emitUsersExceptSender(
+      //     currentLoggedUserSocketId,
+      //     [user_id],
+      //     "update_avatar",
+      //     {
+      //       user_id : user_id,
+      //       filename: filename
+      //     }
+      //   );
+      // }
+
+      return res.status(200).json({ success: true, data: updateAvatar });
+    } catch (error) {
+      return next(createError.InternalServerError());
+    }
+  },
+  onUpdateUserBackground: async (req, res) => {
+    try {
+      const validation = makeValidation((types) => ({
+        payload: req.body,
+        checks: {
+          filename: {
+            type: types.string,
+          },
+        },
+      }));
+      if (!validation.success)
+        return next(createError(400, "pls provide filename"));
+
+      const { filename } = req.body;
+      const currentLoggedUser = req.user_id;
+      const updateBackground = await Users.updateBackground(
+        currentLoggedUser,
+        filename
+      );
+      const { ok, nModified } = await updateBackground;
+      //const currentLoggedUserSocketId = req.socket_id;
+      //如果成功修改
+      //  if (ok && nModified > 0) {
+      //   emitUsersExceptSender(
+      //     currentLoggedUserSocketId,
+      //     [user_id],
+      //     "update_avatar",
+      //     {
+      //       user_id : user_id,
+      //       filename: filename
+      //     }
+      //   );
+      // }
+
+      return res.status(200).json({ success: true, data: updateBackground });
+    } catch (error) {
+      return next(createError.InternalServerError());
     }
   },
 };
