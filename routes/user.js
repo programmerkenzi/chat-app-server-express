@@ -21,6 +21,8 @@ router
 
     user.onGetUserByPublicId
   )
-  .put("/add-friend/:public_id", user.onAddFriend);
+  .put("/add-friend/:public_id", user.onAddFriend)
+  .put("/avatar", user.onUpdateUserAvatar)
+  .put("/bg", user.onUpdateUserBackground);
 
 export default router;
