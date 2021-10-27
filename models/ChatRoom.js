@@ -22,7 +22,7 @@ const chatRoomSchema = new mongoose.Schema(
     background: { type: String, default: "" },
     type: { type: String, default: "private", enum: ["group", "private"] },
     description: { type: String, default: "" },
-    key: { type: Object, required: true },
+    key: { type: Object },
     user_ids: { type: Array, required: true },
   },
   {
