@@ -17,6 +17,11 @@ import "./config/redis.js";
 import "./config/mongo.js";
 // socket configuration
 import WebSockets from "./utils/WebSockets.js";
+
+//environment configuration
+import dotenv from "dotenv";
+const config = dotenv.config();
+
 // routes
 import indexRouter from "./routes/index.js";
 import userRouter from "./routes/user.js";
@@ -24,6 +29,8 @@ import chatRoomRouter from "./routes/chatRoom.js";
 import deleteRouter from "./routes/delete.js";
 import fsRouter from "./routes/fs.js";
 import notificationRouter from "./routes/notification.js";
+import proxy from "express-http-proxy";
+
 // middlewares
 import decode from "./middlewares/jwt.js";
 
@@ -37,7 +44,7 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false, limit: "100mb" }));
 
-app.use("/", indexRouter);
+app.use("/", proxy(process.env.QUOTAGUARDSTATIC_URL), indexRouter);
 app.use("/users", decode.verifyAccessToken, userRouter);
 app.use("/room", decode.verifyAccessToken, chatRoomRouter);
 app.use("/notification", decode.verifyAccessToken, notificationRouter);
