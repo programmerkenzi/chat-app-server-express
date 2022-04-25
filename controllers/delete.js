@@ -57,7 +57,7 @@ export default {
         return res.status(400).json({ error: validation.error });
 
       const { user_ids } = await ChatRoomModel.getChatRoomUsersByRoomId(
-        to_room_id
+        room_id
       );
       if (!user_ids || !user_ids.includes(currentLoginUserId))
         return next(createError.BadRequest());
