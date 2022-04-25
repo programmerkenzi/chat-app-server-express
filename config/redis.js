@@ -13,7 +13,6 @@ const config = dotenv.config();
 const url = process.env.REDIS_URL_PRODUCTION;
 const password = process.env.REDIS_USER_PASSWORD;
 
-console.log('url', url)
 
 const client = redis.createClient({
   port: 11219,
