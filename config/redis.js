@@ -7,11 +7,18 @@
  */
 
 import redis from "async-redis";
+import dotenv from "dotenv";
+const config = dotenv.config();
+
+const url = process.env.REDIS_URL_PRODUCTION;
+const password = process.env.REDIS_USER_PASSWORD;
+
+console.log('url', url)
 
 const client = redis.createClient({
-  port: 6379,
-  host: "localhost",
-  password: "210203201",
+  port: 11219,
+  host: url,
+  password: password,
 });
 
 client.on("connect", () => {

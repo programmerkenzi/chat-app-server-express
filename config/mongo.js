@@ -10,6 +10,10 @@ import dotenv from "dotenv";
 const config = dotenv.config();
 
 export const MONGO_URL = process.env.MANGO_DB_URL_PRODUCTION;
+// export const MONGO_URL = process.env.MANGO_DB_URL_DEVELOPMENT;
+
+
+
 
 mongoose.connect(MONGO_URL, {
   useNewUrlParser: true,
