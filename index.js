@@ -44,7 +44,9 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false, limit: "100mb" }));
 
-app.use("/", proxy(process.env.QUOTAGUARDSTATIC_URL), indexRouter);
+// app.use("/", proxy(process.env.QUOTAGUARDSTATIC_URL), indexRouter);
+app.use("/", indexRouter);
+
 app.use("/users", decode.verifyAccessToken, userRouter);
 app.use("/room", decode.verifyAccessToken, chatRoomRouter);
 app.use("/notification", decode.verifyAccessToken, notificationRouter);
