@@ -18,6 +18,7 @@ export const MONGO_URL = process.env.MANGO_DB_URL_PRODUCTION;
 mongoose.connect(MONGO_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  dbName: "chat-app"
 });
 
 export let gfs;

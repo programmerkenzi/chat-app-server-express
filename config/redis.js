@@ -6,7 +6,7 @@
  * @LastEditors: Kenzi
  */
 
-import redis from "async-redis";
+import redis from "redis";
 import dotenv from "dotenv";
 const config = dotenv.config();
 
@@ -15,10 +15,13 @@ const password = process.env.REDIS_USER_PASSWORD;
 
 
 const client = redis.createClient({
-  port: 11219,
-  host: url,
   password: password,
+  socket: {
+    host: url,
+    port: 18543
+  }
 });
+
 
 client.on("connect", () => {
   console.log("Client connected to redis...");
